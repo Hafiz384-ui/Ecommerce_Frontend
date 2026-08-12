@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 import api from "../services/api";
 import type { User } from "../types/user";
 
@@ -38,7 +39,8 @@ const userStore = create<UserStore>((set) => ({
       });
       return { success: true, data: response.data };
     } catch (err: any) {
-      const message = err.response?.data?.message || "Registration failed";
+      if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
+      const message = err.message;
       set({ loading: false, error: message });
       return { success: false, message };
     }
@@ -48,6 +50,8 @@ const userStore = create<UserStore>((set) => ({
     try {
       set({ loading: true, error: null });
       const response = await api.post("/user/login", data);
+      // console.log('user data in store', response.data.user);
+      
       set({
         loading: false,
         error: null,
@@ -73,7 +77,8 @@ const userStore = create<UserStore>((set) => ({
         message: response.data.message,
       };
     } catch (err: any) {
-      const message = err.response?.data?.message || "Login failed";
+      if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
+      const message = err.message;
       set({ loading: false, error: message });
       return { success: false, message };
     }
@@ -90,9 +95,10 @@ const userStore = create<UserStore>((set) => ({
 
     return { success: true };
   } catch (error: any) {
+    if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
     console.error("Logout failed:", error);
     set({ loading: false });
-    return { success: false, message: error?.message || "Logout failed" };
+    return { success: false, message: error.message };
   }
 },
 
@@ -103,7 +109,8 @@ fetchCurrentUser: async () => {
     try {
       const response = await api.get("/user/mydata");
       set({ loading:false, error: null, user: response.data.user, token });
-    } catch (error) {
+    } catch (error: any) {
+      if (axios.isCancel(error)) return;
       console.error("Failed to fetch user:", error);
       set({loading: false, user: null, token: null });
     }

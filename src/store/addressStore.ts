@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 import api from "../services/api";
 import type { Address } from "../types/order";
 
@@ -33,7 +34,8 @@ const addressStore = create<AddressStore>((set) => ({
       });
       return { success: true, data: response.data };
     } catch (err: any) {
-      const message = err.response?.data?.message || "Creating address failed";
+      if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
+      const message = err.message;
       set({ loading: false, error: message });
       return { success: false, message };
     }
@@ -50,7 +52,8 @@ const addressStore = create<AddressStore>((set) => ({
         error: null,
       });
     } catch (err: any) {
-      set({ loading: false, error: err.message || "Failed to fetch address" });
+      if (axios.isCancel(err)) return;
+      set({ loading: false, error: err.message });
     }
   },
 
@@ -65,7 +68,8 @@ const addressStore = create<AddressStore>((set) => ({
         error: null,
       }));
     } catch (err: any) {
-      set({ loading: false, error: err.message || "Failed to fetch products" });
+      if (axios.isCancel(err)) return;
+      set({ loading: false, error: err.message });
     }
   },
   

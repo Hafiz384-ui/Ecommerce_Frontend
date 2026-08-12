@@ -11,8 +11,9 @@ function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { user, logoutUser, fetchCurrentUser } = userStore();
   const { wishListProducts, cartItems } = productStore();
-  const token = localStorage.getItem('token');
-
+  const token = localStorage.getItem("token");
+  
+  
   useEffect(() => {
     const initializeUser = async () => {
       await fetchCurrentUser();
@@ -108,12 +109,19 @@ function Navbar() {
 
                 <button
                   aria-label="User Account"
-                  className="p-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-300 cursor-pointer"
+                  className="w-15 h-15 mt-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-300 cursor-pointer"
                   onClick={() => {
                     setUserMenuOpen(!userMenuOpen);
                   }}
                 >
-                  {userMenuOpen ? <X /> : <CircleUserRound />}
+                  {userMenuOpen ?
+                  <div className="flex justify-center items-center"><X /></div>
+                   
+                   : 
+                  <div className="flex flex-col items-center">
+                    <CircleUserRound />
+                    <p className="text-sm ">{user?.username?.split(" ")[0].slice(0,6)}</p>
+                  </div>}
                 </button>
               </>
             ) : (

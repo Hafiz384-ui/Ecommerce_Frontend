@@ -37,12 +37,14 @@ const ItemCards: React.FC<ItemCardProps> = ({
     try {
       setWish((prev) => !prev);
       const res = await addProductToWishList(id);
-
+      console.log('wish list res', res);
+      
       if (!res.success) {
         setWish((prev) => !prev);
-        toast.success(res.message || "Failed to update wishlist");
+        toast.error(res.message || "Failed to update wishlist");
       } else {
         console.log("Wishlist updated:", res.message);
+        toast.success(res.message || "Wishlist updated successfully");
         if (onWishToggle) onWishToggle();
       }
     } catch (error) {

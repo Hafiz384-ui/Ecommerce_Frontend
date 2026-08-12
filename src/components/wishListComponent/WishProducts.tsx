@@ -3,33 +3,15 @@ import productStore from "../../store/productStore";
 import ItemCards from "../ui/ItemCards";
 import Loader from "react-js-loader";
 
-interface Product {
-  images: string[];
-  name: string;
-  baseprice: number;
-  _id: string;
-}
-
-interface WishItem {
-  product: Product;
-}
-
 function WishProducts() {
-  const { fetchWishListItems, wishlistLoading } = productStore();
-  const [items, setItems] = useState<WishItem[]>([]);
+  const { fetchWishListItems, wishlistLoading, wishListProducts } = productStore();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadWishlist = async () => {
       try {
         window.scrollTo(0, 0);
-        const response = await fetchWishListItems();
-
-        if (response?.success && response?.data?.wishlistItems) {
-          setItems(response.data.wishlistItems);
-        } else {
-          setItems([]);
-        }
+        await fetchWishListItems();
       } catch (err: any) {
         setError("Failed to load wishlist items");
       }
@@ -37,6 +19,7 @@ function WishProducts() {
 
     loadWishlist();
   }, [fetchWishListItems]);
+  
 
 
   if (error) {
@@ -64,26 +47,19 @@ function WishProducts() {
         </div>
       ) : (
         <>
-          {items?.length === 0 ? (
+          {wishListProducts?.length === 0 ? (
             <div className="text-center text-gray-600 font-medium">
               No products in your wishlist
             </div>
           ) : (
             <div className="max-w-7xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 px-4">
-              {items?.map((val, index) => (
+              {wishListProducts?.map((product, index) => (
                 <ItemCards
                   key={index}
-                  cardImage={val?.product?.images?.[0]}
-                  cardTitle={val?.product?.name}
-                  cardPrice={val?.product?.baseprice}
-                  productId={val?.product?._id}
-                  onWishToggle={() => {
-                    setItems((prev) =>
-                      prev.filter(
-                        (item) => item.product._id !== val.product._id
-                      )
-                    );
-                  }}
+                  cardImage={product?.images?.[0]}
+                  cardTitle={product?.name}
+                  cardPrice={product?.baseprice}
+                  productId={product?._id}
                 />
               ))}
             </div>

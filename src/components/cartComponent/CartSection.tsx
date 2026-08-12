@@ -17,7 +17,7 @@ interface CartItem {
 }
 
 const CartSection: React.FC = () => {
-  const { fetchCartItems, loading, deleteCartItems, addToCart } =
+  const { fetchCartItems, productLoading, deleteCartItems, addToCart } =
     productStore();
   const [localCart, setLocalCart] = useState<CartItem[]>([]);
 
@@ -181,7 +181,7 @@ const CartSection: React.FC = () => {
       <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">
         Your Cart
       </h2>
-      {loading ? (
+      {productLoading ? (
         <div className="flex justify-center my-5 min-h-[300px]">
           <Loader
             type="spinner-default"

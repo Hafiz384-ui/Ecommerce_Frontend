@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 import api from "../services/api";
 import type { Product } from "../types/product";
 import type { Cart } from "../types/cart";
@@ -103,7 +104,8 @@ const productStore = create<ProductStore>((set) => ({
         nextPage: hasNextPage ? nextPage : 1,
       }));
     } catch (err: any) {
-      set({ loading: false, error: err.message || "Failed to fetch products" });
+      if (axios.isCancel(err)) return;
+      set({ loading: false, error: err.message });
     }
   },
 
@@ -118,7 +120,8 @@ const productStore = create<ProductStore>((set) => ({
         error: null,
       });
     } catch (err: any) {
-      set({ loading: false, error: err.message || "Failed to fetch product" });
+      if (axios.isCancel(err)) return;
+      set({ loading: false, error: err.message });
     }
   },
 
@@ -136,7 +139,8 @@ const productStore = create<ProductStore>((set) => ({
         // cartLength: newCartItems.length
       };
     } catch (error: any) {
-      const message = error.response?.data?.message || "add cart failed";
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
       set({ loading: false, error: message });
       return { success: false, message };
     }
@@ -162,7 +166,8 @@ const productStore = create<ProductStore>((set) => ({
         message: response.data.message,
       };
     } catch (error: any) {
-      const message = error.response?.data?.message || "add cart failed";
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
       set({ productLoading: false, error: message });
       return { success: false, message };
     }
@@ -189,7 +194,8 @@ const productStore = create<ProductStore>((set) => ({
       data: response.data.cart,
     };
   } catch (error: any) {
-    const message = error.response?.data?.message || "delete cart failed";
+    if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+    const message = error.message;
     set({ loading: false, error: message });
     return { success: false, message };
   }
@@ -221,7 +227,8 @@ const productStore = create<ProductStore>((set) => ({
         data: response.data,
       };
     } catch (error: any) {
-      const message = error.response?.data?.message || "delete cart failed";
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
       set({ categoryloading: false, error: message });
       return { success: false, message };
     }
@@ -232,9 +239,9 @@ const productStore = create<ProductStore>((set) => ({
       set({ wishlistLoading: true, error: null });
       const response = await api.get(`/product/addtowishlist/${id}`);
       const wishlistResponse = await api.get("/product/getwishlist");
-      const wishlistItems = wishlistResponse.data.wishlistItems.map(
-      (item: any) => item.product
-    );
+      const wishlistItems = wishlistResponse.data.wishlistItems
+        .map((item: any) => item.product)
+        .filter(Boolean);
       set({
       wishlistLoading: false,
       error: null,
@@ -246,7 +253,8 @@ const productStore = create<ProductStore>((set) => ({
         data: response.data,
       };
     } catch (error: any) {
-      const message = error.response?.data?.message || "delete cart failed";
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
       set({ wishlistLoading: false, error: message });
       return { success: false, message };
     }
@@ -256,22 +264,25 @@ const productStore = create<ProductStore>((set) => ({
     try {
       set({ wishlistLoading: true, error: null });
       const response = await api.get("/product/getwishlist");
-      const wishlistItems = response.data.wishlistItems.map(
-      (item: any) => item.product
-    );
+      console.log('wish list items', response);
+      
+      const wishlistItems = response?.data?.wishlistItems
+        ?.map((item: any) => item.product)
+        .filter(Boolean) || [];    
       set({
         wishlistLoading: false,
         error: null,
-        message: response.data.message,
+        message: response?.data?.message,
         wishListProducts: wishlistItems,
       });
       return {
         success: true,
-        message: response.data.message,
+        message: response?.data?.message,
         data: response.data,
       };
     } catch (error: any) {
-      const message = error.response?.data?.message || "delete cart failed";
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
       set({ wishlistLoading: false, error: message });
       return { success: false, message };
     }
@@ -301,7 +312,8 @@ const productStore = create<ProductStore>((set) => ({
       };
     }
   } catch (error: any) {
-    const message = error.response?.data?.message || "Coupon apply failed";
+    if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+    const message = error.message;
     set({ loading: false, error: message });
     return { success: false, message };
   }
@@ -323,7 +335,8 @@ const productStore = create<ProductStore>((set) => ({
         data: response.data,
       };
     } catch (error: any) {
-      const message = error.response?.data?.message || "Create review failed";
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
       set({ loading: false, error: message });
       return { success: false, message };
     }

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 import api from "../services/api";
 import type { Coupon } from "../types/coupon";
 
@@ -30,9 +31,10 @@ const couponStore = create<CouponStore>((set) => ({
         loading: false,
       });
     } catch (err: any) {
+      if (axios.isCancel(err)) return;
       set({
         loading: false,
-        error: err.message || "Failed to fetch coupons",
+        error: err.message,
       });
     }
   },

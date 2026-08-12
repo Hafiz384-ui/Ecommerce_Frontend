@@ -3,15 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import { FaStar } from "react-icons/fa";
 import productStore from "../../store/productStore";
+import userStore from "../../store/userStore";
+import { Heart } from "lucide-react";
 
 function DetailsSection() {
   const navigate = useNavigate();
-  const { currentProduct, addToCart } = productStore();
+  const { currentProduct, addToCart, addProductToWishList, wishListProducts } = productStore();
+  const { user } = userStore();
 
   const [mainImage, setMainImage] = useState("");
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedStorage, setSelectedStorage] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [isWish, setIsWish] = useState<boolean>(false);
 
   // SAFE IMAGES
   const images = useMemo(
@@ -70,6 +74,38 @@ function DetailsSection() {
   useEffect(() => {
     if (images.length) setMainImage(images[0]);
   }, [images]);
+
+  // Sync wishlist status
+  useEffect(() => {
+    if (currentProduct && wishListProducts?.some((p) => p?._id === currentProduct._id)) {
+      setIsWish(true);
+    } else {
+      setIsWish(false);
+    }
+  }, [wishListProducts, currentProduct]);
+
+  // Toggle wishlist item
+  const handleWishlistToggle = async () => {
+    if (!user?.email) {
+      toast.error("Please login to manage wishlist");
+      return;
+    }
+    if (!currentProduct?._id) return;
+
+    try {
+      setIsWish((prev) => !prev);
+      const res = await addProductToWishList(currentProduct._id);
+      if (!res.success) {
+        setIsWish((prev) => !prev);
+        toast.error(res.message || "Failed to update wishlist");
+      } else {
+        toast.success(res.message || "Wishlist updated");
+      }
+    } catch (error) {
+      setIsWish((prev) => !prev);
+      toast.error("Something went wrong. Please try again.");
+    }
+  };
 
   // THUMBNAIL CLICK HANDLER
   const handleThumbnailClick = (img: string) => {
@@ -155,6 +191,7 @@ function DetailsSection() {
       setQuantity((q) => q - 1);
     }
   };
+  // Quantity handle after add to cart
 
   // ADD TO CART
   const addToCartHandler = async () => {
@@ -367,6 +404,20 @@ function DetailsSection() {
                   {selectedVariant?.quantity === 0
                     ? "Out of Stock"
                     : "Add to Cart"}
+                </button>
+
+                <button
+                  onClick={handleWishlistToggle}
+                  className="p-3.5 rounded-full border border-gray-300 hover:bg-gray-100 transition-all duration-300 flex items-center justify-center cursor-pointer mb-3"
+                  aria-label="Toggle Wishlist"
+                >
+                  <Heart
+                    className={`w-6 h-6 transition-all duration-300 ${
+                      isWish
+                        ? "fill-red-500 text-red-500"
+                        : "text-gray-700 hover:text-red-500"
+                    }`}
+                  />
                 </button>
               </div>
 

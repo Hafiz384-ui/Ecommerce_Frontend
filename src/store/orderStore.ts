@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import axios from "axios";
 import api from "../services/api";
 import type { Order } from "../types/order";
 
@@ -32,7 +33,8 @@ const orderStore = create<OrderStore>((set) => ({
       });
       return { success: true, data: response.data };
     } catch (err: any) {
-      const message = err.response?.data?.message || "Creating address failed";
+      if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
+      const message = err.message;
       set({ loading: false, error: message });
       return { success: false, message };
     }
@@ -56,7 +58,8 @@ const orderStore = create<OrderStore>((set) => ({
         message: response.data.message,
       };
     } catch (error: any) {
-      const message = error.response?.data?.message || "add Order failed";
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
       set({ loading: false, error: message });
       return { success: false, message };
     }
