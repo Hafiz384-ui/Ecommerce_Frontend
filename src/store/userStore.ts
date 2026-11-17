@@ -1,7 +1,12 @@
 import { create } from "zustand";
 import axios from "axios";
-import api from "../services/api";
 import type { User } from "../types/user";
+import {
+  registerUserApi,
+  loginUserApi,
+  logoutUserApi,
+  fetchCurrentUserApi,
+} from "../services/userService";
 
 interface UserStore {
   loading: boolean;
@@ -36,15 +41,15 @@ const userStore = create<UserStore>((set) => ({
   registerUser: async (data: User) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.post("/user/register", data);
-      const { message, user } = response.data;
+      const responseData = await registerUserApi(data);
+      const { message, user } = responseData;
       set({
         loading: false,
         error: null,
         message: message || "Registered successfully!",
         user: user || null,
       });
-      return { success: true, data: response.data };
+      return { success: true, data: responseData };
     } catch (err: any) {
       if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
       const message = err.message;
@@ -56,19 +61,19 @@ const userStore = create<UserStore>((set) => ({
   loginUser: async (data: User) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.post("/user/login", data);
-      
+      const responseData = await loginUserApi(data);
+
       set({
         loading: false,
         error: null,
-        user: response.data.user || null,
-        token: response.data.token || null,
+        user: responseData.user || null,
+        token: responseData.token || null,
         isAuthChecking: false,
-        message: response.data.message || "Login successful!",
+        message: responseData.message || "Login successful!",
       });
-      if (response.data.token) {
+      if (responseData.token) {
         const expiryTime: any = Date.now() + 7 * 24 * 60 * 60 * 1000;
-        await localStorage.setItem("token", response.data.token);
+        await localStorage.setItem("token", responseData.token);
         await localStorage.setItem("tokenExpiry", expiryTime);
 
         setTimeout(() => {
@@ -80,8 +85,8 @@ const userStore = create<UserStore>((set) => ({
       }
       return {
         success: true,
-        data: response.data,
-        message: response.data.message,
+        data: responseData,
+        message: responseData.message,
       };
     } catch (err: any) {
       if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
@@ -93,7 +98,7 @@ const userStore = create<UserStore>((set) => ({
 
   logoutUser: async () => {
     try {
-      await api.post("/user/logout"); 
+      await logoutUserApi();
       localStorage.removeItem("token");
       localStorage.removeItem("tokenExpiry");
       set({ user: null, token: null, isAuthChecking: false });
@@ -122,12 +127,12 @@ const userStore = create<UserStore>((set) => ({
 
     set({ isAuthChecking: true, loading: true, error: null });
     try {
-      const response = await api.get("/user/mydata");
+      const responseData = await fetchCurrentUserApi();
       set({
         isAuthChecking: false,
         loading: false,
         error: null,
-        user: response.data.user || null,
+        user: responseData.user || null,
         token,
       });
     } catch {

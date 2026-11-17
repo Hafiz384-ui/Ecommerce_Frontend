@@ -1,8 +1,19 @@
 import { create } from "zustand";
 import axios from "axios";
-import api from "../services/api";
 import type { Product } from "../types/product";
 import type { Cart } from "../types/cart";
+import {
+  fetchProductsApi,
+  findProductApi,
+  fetchProductByCategoryApi,
+  addToCartApi,
+  fetchCartItemsApi,
+  deleteCartItemsApi,
+  addProductToWishListApi,
+  fetchWishListItemsApi,
+  applyCouponCodeApi,
+  createReviewApi,
+} from "../services/productService";
 
 interface ProductStore {
   product: Product[];
@@ -72,7 +83,7 @@ const productStore = create<ProductStore>((set) => ({
   cartLength: 0,
   categoryItems: [],
   summaryItems: [],
-  cartThings:[],
+  cartThings: [],
   selectedCategory: localStorage.getItem("selectedCategory") || "AllProducts",
   discount: null,
 
@@ -91,10 +102,8 @@ const productStore = create<ProductStore>((set) => ({
   fetchProducts: async (page: number, limit: number, append: boolean) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get("/product/fetchproducts", {
-        params: { page, limit },
-      });
-      const { docs, hasNextPage, nextPage } = response.data.products;
+      const responseData = await fetchProductsApi(page, limit);
+      const { docs, hasNextPage, nextPage } = responseData.products;
 
       set((state) => ({
         product: append ? [...state.product, ...docs] : docs,
@@ -113,9 +122,9 @@ const productStore = create<ProductStore>((set) => ({
   findProduct: async (id: string) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get(`/product/getproduct/${id}`);
+      const responseData = await findProductApi(id);
       set({
-        currentProduct: response.data.product || null,
+        currentProduct: responseData.product || null,
         loading: false,
         error: null,
       });
@@ -128,15 +137,14 @@ const productStore = create<ProductStore>((set) => ({
   addToCart: async (data: Cart) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.post("/product/addtocart", data);
-      console.log("add to cart response in stroe", response.data);
-      const newCartItems = response.data.cart?.items || [];
-      set({ loading: false, error: null, message: response.data.message, cartItems: newCartItems, });
+      const responseData = await addToCartApi(data);
+      console.log("add to cart response in store", responseData);
+      const newCartItems = responseData.cart?.items || [];
+      set({ loading: false, error: null, message: responseData.message, cartItems: newCartItems });
       return {
         success: true,
-        data: response.data,
-        message: response.data.message,
-        // cartLength: newCartItems.length
+        data: responseData,
+        message: responseData.message,
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
@@ -157,21 +165,20 @@ const productStore = create<ProductStore>((set) => ({
 
     try {
       set({ productLoading: true, error: null });
-      const response = await api.get("/product/cartitems");
-      console.log("items in store", response.data.items);
-      const items = response.data.items || [];
+      const responseData = await fetchCartItemsApi();
+      console.log("items in store", responseData.items);
+      const items = responseData.items || [];
 
       set({
         productLoading: false,
         error: null,
         cartItems: items,
-        // cartLength: items.length,
-        message: response.data.message,
+        message: responseData.message,
       });
       return {
         success: true,
-        data: response.data,
-        message: response.data.message,
+        data: responseData,
+        message: responseData.message,
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
@@ -182,32 +189,31 @@ const productStore = create<ProductStore>((set) => ({
   },
 
   deleteCartItems: async (id: string) => {
-  try {
-    set({ loading: true, error: null });
+    try {
+      set({ loading: true, error: null });
 
-    const response = await api.get(`/product/deletecartitems/${id}`);
-    const updatedCartItems = response.data.cart?.items || [];
+      const responseData = await deleteCartItemsApi(id);
+      const updatedCartItems = responseData.cart?.items || [];
 
-    set({
-      loading: false,
-      error: null,
-      cartItems: updatedCartItems,
-      // cartLength: updatedCartItems.length,
-      message: response.data.message,
-    });
+      set({
+        loading: false,
+        error: null,
+        cartItems: updatedCartItems,
+        message: responseData.message,
+      });
 
-    return {
-      success: true,
-      message: response.data.message,
-      data: response.data.cart,
-    };
-  } catch (error: any) {
-    if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
-    const message = error.message;
-    set({ loading: false, error: message });
-    return { success: false, message };
-  }
-},
+      return {
+        success: true,
+        message: responseData.message,
+        data: responseData.cart,
+      };
+    } catch (error: any) {
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
+      set({ loading: false, error: message });
+      return { success: false, message };
+    }
+  },
 
   setSelectedCategory: (cat: string) => {
     localStorage.setItem("selectedCategory", cat);
@@ -217,22 +223,20 @@ const productStore = create<ProductStore>((set) => ({
   fetchProductByCategory: async (category: string) => {
     try {
       set({ categoryloading: true, error: null });
-      const response = await api.get(
-        `/product/getproductsbycategory/${category}`
-      );
+      const responseData = await fetchProductByCategoryApi(category);
       localStorage.setItem("selectedCategory", category);
-      console.log("categoryItems in store", response.data.products);
+      console.log("categoryItems in store", responseData.products);
       set({
         categoryloading: false,
         error: null,
-        message: response.data.message,
-        categoryItems: response.data.products || [],
+        message: responseData.message,
+        categoryItems: responseData.products || [],
         selectedCategory: category,
       });
       return {
         success: true,
-        message: response.data.message,
-        data: response.data,
+        message: responseData.message,
+        data: responseData,
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
@@ -245,20 +249,20 @@ const productStore = create<ProductStore>((set) => ({
   addProductToWishList: async (id: string) => {
     try {
       set({ wishlistLoading: true, error: null });
-      const response = await api.get(`/product/addtowishlist/${id}`);
-      const wishlistResponse = await api.get("/product/getwishlist");
-      const wishlistItems = wishlistResponse.data.wishlistItems
+      const responseData = await addProductToWishListApi(id);
+      const wishlistData = await fetchWishListItemsApi();
+      const wishlistItems = wishlistData.wishlistItems
         .map((item: any) => item.product)
         .filter(Boolean);
       set({
-      wishlistLoading: false,
-      error: null,
-      wishListProducts: wishlistItems 
-    });
+        wishlistLoading: false,
+        error: null,
+        wishListProducts: wishlistItems,
+      });
       return {
         success: true,
-        message: response.data.message,
-        data: response.data,
+        message: responseData.message,
+        data: responseData,
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
@@ -279,22 +283,22 @@ const productStore = create<ProductStore>((set) => ({
 
     try {
       set({ wishlistLoading: true, error: null });
-      const response = await api.get("/product/getwishlist");
-      console.log('wish list items', response);
-      
-      const wishlistItems = response?.data?.wishlistItems
+      const responseData = await fetchWishListItemsApi();
+      console.log("wish list items", responseData);
+
+      const wishlistItems = responseData?.wishlistItems
         ?.map((item: any) => item.product)
-        .filter(Boolean) || [];    
+        .filter(Boolean) || [];
       set({
         wishlistLoading: false,
         error: null,
-        message: response?.data?.message,
+        message: responseData?.message,
         wishListProducts: wishlistItems,
       });
       return {
         success: true,
-        message: response?.data?.message,
-        data: response.data,
+        message: responseData?.message,
+        data: responseData,
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
@@ -305,50 +309,50 @@ const productStore = create<ProductStore>((set) => ({
   },
 
   applyCouponCode: async (code: string) => {
-  try {
-    set({ loading: true, error: null });
-    const response = await api.post("/coupon/applycoupon", {code} );
-    set({
-      loading: false,
-      error: null,
-      message: response.data.message,
-      discount: response.data.discount || null,
-    });
+    try {
+      set({ loading: true, error: null });
+      const responseData = await applyCouponCodeApi(code);
+      set({
+        loading: false,
+        error: null,
+        message: responseData.message,
+        discount: responseData.discount || null,
+      });
 
-     if (response.data.success) {
-      return {
-        success: true,
-        message: response.data.message,
-        data: response.data,
-      };
-    } else {
-      return {
-        success: false,
-        message: response.data.message || "Coupon apply failed",
-      };
+      if (responseData.success) {
+        return {
+          success: true,
+          message: responseData.message,
+          data: responseData,
+        };
+      } else {
+        return {
+          success: false,
+          message: responseData.message || "Coupon apply failed",
+        };
+      }
+    } catch (error: any) {
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      const message = error.message;
+      set({ loading: false, error: message });
+      return { success: false, message };
     }
-  } catch (error: any) {
-    if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
-    const message = error.message;
-    set({ loading: false, error: message });
-    return { success: false, message };
-  }
-},
+  },
 
   createReview: async (data: any) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.post("/product/review", data);
+      const responseData = await createReviewApi(data);
 
       set({
         loading: false,
         error: null,
-        message: response.data.message,
+        message: responseData.message,
       });
       return {
         success: true,
-        message: response.data.message,
-        data: response.data,
+        message: responseData.message,
+        data: responseData,
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
