@@ -1,7 +1,32 @@
 import { useState } from "react";
-import { X, SlidersHorizontal } from "lucide-react";
+import {
+  X,
+  SlidersHorizontal,
+  LayoutGrid,
+  Smartphone,
+  Laptop,
+  Tablet,
+  Watch,
+  Headphones,
+  Check,
+} from "lucide-react";
 import productStore from "../../store/productStore";
 import { toast } from "react-toastify";
+
+interface CategoryOption {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}
+
+const CATEGORIES: CategoryOption[] = [
+  { id: "AllProducts", name: "All Products", icon: LayoutGrid },
+  { id: "Smartphone", name: "Smartphones", icon: Smartphone },
+  { id: "Laptop", name: "Laptops & Notebooks", icon: Laptop },
+  { id: "Tablet", name: "Tablets & iPads", icon: Tablet },
+  { id: "Smartwatch", name: "Smartwatches", icon: Watch },
+  { id: "Headphone", name: "Headphones & Audio", icon: Headphones },
+];
 
 function FilterSection() {
   const { fetchProductByCategory, selectedCategory, setSelectedCategory } =
@@ -11,96 +36,125 @@ function FilterSection() {
 
   const categoryHandler = async (category: string) => {
     setSelectedCategory(category);
+    setIsOpen(false);
 
     const res = await fetchProductByCategory(category);
-    if (!res.success) toast.error(res.message);
-
-    setIsOpen(false);
+    if (!res.success) toast.error(res.message || "Failed to load category products");
   };
+
+  const activeCategory = selectedCategory || "AllProducts";
+  const activeCategoryItem = CATEGORIES.find((c) => c.id === activeCategory);
 
   return (
     <>
-      {/* MOBILE FILTER BUTTON */}
-      <div>
-  {/* Mobile Filter Button */}
-  <div className="lg:hidden flex items-center justify-between p-4 bg-white rounded-xl shadow-md mb-4">
-    <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
-    <button
-      onClick={() => setIsOpen(true)}
-      className="p-2 border rounded-lg hover:bg-gray-100 transition"
-    >
-      <SlidersHorizontal size={22} />
-    </button>
-  </div>
+      {/* MOBILE FILTER TRIGGER BAR */}
+      <div className="lg:hidden mb-4 flex items-center justify-between p-4 bg-white rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="flex items-center gap-2.5">
+          {activeCategoryItem && (
+            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-800">
+              <activeCategoryItem.icon size={16} />
+            </div>
+          )}
+          <div>
+            <p className="text-xs text-slate-400 font-medium">Selected Category</p>
+            <p className="text-sm font-bold text-slate-900">
+              {activeCategoryItem?.name || "All Products"}
+            </p>
+          </div>
+        </div>
 
-  {/* Sidebar (Mobile Drawer + Desktop Static) */}
-  <div
-    className={`fixed lg:static top-0 left-0 z-50 lg:z-auto
-      h-full lg:h-auto w-3/4 sm:w-2/3 md:w-1/2 lg:w-full
-      bg-white border-r border-gray-200 shadow-xl lg:shadow-none
-      p-5 overflow-y-auto rounded-r-2xl hide-scrollbar
-      transform transition-transform duration-300
-      ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
-  >
-    {/* Close Button (Mobile) */}
-    <div className="flex justify-between items-center mb-4 lg:hidden">
-      <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
-      <button
-        onClick={() => setIsOpen(false)}
-        className="p-2 border rounded-lg hover:bg-gray-100"
+        <button
+          onClick={() => setIsOpen(true)}
+          className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-black transition-colors cursor-pointer"
+        >
+          <SlidersHorizontal size={14} />
+          <span>Filters</span>
+        </button>
+      </div>
+
+      {/* SIDEBAR PANEL (Desktop Static + Mobile Drawer) */}
+      <div
+        className={`fixed lg:static top-0 left-0 z-50 lg:z-auto
+          h-full lg:h-auto w-4/5 sm:w-80 lg:w-full
+          bg-white border-r lg:border border-slate-200/80 shadow-2xl lg:shadow-xs
+          p-5 sm:p-6 overflow-y-auto lg:overflow-visible
+          rounded-r-3xl lg:rounded-3xl
+          transform transition-transform duration-300 ease-in-out
+          ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}
       >
-        <X size={22} />
-      </button>
-    </div>
+        {/* Mobile Drawer Header */}
+        <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100 lg:hidden">
+          <div className="flex items-center gap-2">
+            <SlidersHorizontal size={18} className="text-slate-700" />
+            <h2 className="text-base font-bold text-slate-900">Filter By Category</h2>
+          </div>
+          <button
+            onClick={() => setIsOpen(false)}
+            aria-label="Close filters"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-black hover:bg-slate-100 transition-colors"
+          >
+            <X size={20} />
+          </button>
+        </div>
 
-    {/* Sticky filter for desktop */}
-    <div className="lg:sticky lg:top-28">
+        {/* Desktop Sidebar Header */}
+        <div className="hidden lg:flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+          <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+            <SlidersHorizontal size={15} className="text-slate-500" />
+            <span>Categories</span>
+          </h2>
+          <span className="text-[11px] font-semibold text-slate-400">
+            {CATEGORIES.length} options
+          </span>
+        </div>
 
-      {/* CATEGORIES */}
-      <div className="mb-4">
-        <h3 className="font-semibold text-gray-800 mb-3">Categories</h3>
+        {/* Category Buttons List */}
+        <div className="space-y-1.5">
+          {CATEGORIES.map((cat) => {
+            const active = activeCategory === cat.id;
+            const Icon = cat.icon;
 
-        <div className="flex flex-col space-y-2">
-          {[
-            "AllProducts",
-            "Smartphone",
-            "Laptop",
-            "Tablet",
-            "Smartwatch",
-            "Headphone",
-          ].map((val, index) => {
-            const active = selectedCategory === val;
             return (
               <button
-                key={index}
-                className={`w-full py-2 rounded-xl text-left px-4
-                  border transition-all cursor-pointer
-                  ${
-                    active
-                      ? "bg-black text-white border-black"
-                      : "bg-gray-50 hover:bg-gray-200 text-gray-700 border-gray-300"
-                  }`}
-                onClick={() => categoryHandler(val)}
+                key={cat.id}
+                onClick={() => categoryHandler(cat.id)}
+                className={`w-full group flex items-center justify-between px-3.5 py-3 rounded-2xl text-sm transition-all duration-200 cursor-pointer text-left ${
+                  active
+                    ? "bg-black text-white font-bold shadow-md shadow-black/10 scale-[1.01]"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 font-medium"
+                }`}
               >
-                {val}
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${
+                      active
+                        ? "bg-white/15 text-white"
+                        : "bg-slate-100 text-slate-500 group-hover:text-slate-900 group-hover:bg-slate-200/70"
+                    }`}
+                  >
+                    <Icon size={16} />
+                  </div>
+                  <span>{cat.name}</span>
+                </div>
+
+                {active && (
+                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                    <Check size={12} strokeWidth={3} className="text-white" />
+                  </div>
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-    </div>
-  </div>
-
-  {/* Mobile Overlay */}
-  {isOpen && (
-    <div
-      onClick={() => setIsOpen(false)}
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 lg:hidden"
-    />
-  )}
-</div>
-
+      {/* Mobile Drawer Overlay */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+        />
+      )}
     </>
   );
 }

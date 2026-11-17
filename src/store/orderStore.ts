@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import axios from "axios";
-import api from "../services/api";
 import type { Order } from "../types/order";
+import { createOrderApi, fetchOrdersApi } from "../services/orderService";
 
 interface OrderStore {
   Orders: Order[];
@@ -20,18 +20,18 @@ const orderStore = create<OrderStore>((set) => ({
   error: null,
   message: null,
 
-  // Create address
+  // Create order
   createOrder: async (data: Order) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.post("/order/createorder", data);
-      const { message } = response.data;
+      const responseData = await createOrderApi(data);
+      const { message } = responseData;
       set({
         loading: false,
         error: null,
         message: message || "Address created successfully!",
       });
-      return { success: true, data: response.data };
+      return { success: true, data: responseData };
     } catch (err: any) {
       if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
       const message = err.message;
@@ -43,19 +43,19 @@ const orderStore = create<OrderStore>((set) => ({
   fetchOrder: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get("/order/getorder");
-      console.log("items in store", response.data.orders);
+      const responseData = await fetchOrdersApi();
+      console.log("items in store", responseData.orders);
 
       set({
         loading: false,
         error: null,
-        Orders: response.data.orders,
-        message: response.data.message,
+        Orders: responseData.orders,
+        message: responseData.message,
       });
       return {
         success: true,
-        data: response.data,
-        message: response.data.message,
+        data: responseData,
+        message: responseData.message,
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };

@@ -1,16 +1,10 @@
 @import "tailwindcss";
 
-* {
-  transition: all 0.2s ease-in-out;
-  scroll-behavior: smooth;
-}
 html,
 body {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
   overflow-x: hidden;
 }
 

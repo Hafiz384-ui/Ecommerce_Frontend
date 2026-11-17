@@ -30,6 +30,8 @@ const initialExpiry = typeof window !== "undefined" ? localStorage.getItem("toke
 const isInitialExpired = initialExpiry ? Date.now() > Number(initialExpiry) : false;
 const hasInitialToken = Boolean(initialToken && !isInitialExpired);
 
+let hasVerifiedOnce = false;
+
 const userStore = create<UserStore>((set) => ({
   loading: false,
   isAuthChecking: hasInitialToken,
@@ -114,20 +116,27 @@ const userStore = create<UserStore>((set) => ({
   },
 
   fetchCurrentUser: async () => {
-    const token = localStorage.getItem("token");
-    const expiry = localStorage.getItem("tokenExpiry");
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const expiry = typeof window !== "undefined" ? localStorage.getItem("tokenExpiry") : null;
     const isExpired = expiry && Date.now() > Number(expiry);
 
     if (!token || isExpired) {
-      localStorage.removeItem("token");
-      localStorage.removeItem("tokenExpiry");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("tokenExpiry");
+      }
+      hasVerifiedOnce = true;
       set({ isAuthChecking: false, loading: false, user: null, token: null });
       return;
     }
 
-    set({ isAuthChecking: true, loading: true, error: null });
+    if (!hasVerifiedOnce) {
+      set({ isAuthChecking: true, loading: true, error: null });
+    }
+
     try {
       const responseData = await fetchCurrentUserApi();
+      hasVerifiedOnce = true;
       set({
         isAuthChecking: false,
         loading: false,
@@ -137,8 +146,11 @@ const userStore = create<UserStore>((set) => ({
       });
     } catch {
       // Unauthenticated / expired token check fails gracefully without breaking public browsing
-      localStorage.removeItem("token");
-      localStorage.removeItem("tokenExpiry");
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+        localStorage.removeItem("tokenExpiry");
+      }
+      hasVerifiedOnce = true;
       set({
         isAuthChecking: false,
         loading: false,

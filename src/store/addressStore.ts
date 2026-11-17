@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import axios from "axios";
-import api from "../services/api";
 import type { Address } from "../types/order";
+import {
+  createAddressApi,
+  fetchAddressesApi,
+  deleteAddressApi,
+} from "../services/addressService";
 
 interface AddressStore {
   addresses: Address[];
@@ -25,14 +29,14 @@ const addressStore = create<AddressStore>((set) => ({
   createAddress: async (data: Address) => {
     try {
       set({ loading: true, error: null });
-      const response = await api.post("/address/createaddress", data);
-      const { message } = response.data;
+      const responseData = await createAddressApi(data);
+      const { message } = responseData;
       set({
         loading: false,
         error: null,
         message: message || "Address created successfully!",
       });
-      return { success: true, data: response.data };
+      return { success: true, data: responseData };
     } catch (err: any) {
       if (axios.isCancel(err)) return { success: false, message: "Request cancelled" };
       const message = err.message;
@@ -44,10 +48,10 @@ const addressStore = create<AddressStore>((set) => ({
   fetchaddress: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get("/address/getaddresses");
-      console.log("address in store ...", response.data.addresses);
+      const responseData = await fetchAddressesApi();
+      console.log("address in store ...", responseData.addresses);
       set({
-        addresses: response.data.addresses || [],
+        addresses: responseData.addresses || [],
         loading: false,
         error: null,
       });
@@ -60,7 +64,7 @@ const addressStore = create<AddressStore>((set) => ({
   deleteaddress: async (id: string) => {
     try {
       set({ loading: true, error: null });
-      await api.get(`/address/deleteaddress/${id}`);
+      await deleteAddressApi(id);
 
       set((state) => ({
         addresses: state.addresses.filter((addr) => addr._id !== id),

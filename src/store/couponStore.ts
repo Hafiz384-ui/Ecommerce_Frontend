@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import axios from "axios";
-import api from "../services/api";
 import type { Coupon } from "../types/coupon";
+import { fetchCouponsApi } from "../services/couponService";
 
 interface CouponStore {
   coupons: Coupon[];
@@ -20,11 +20,11 @@ const couponStore = create<CouponStore>((set) => ({
   fetchCoupon: async () => {
     try {
       set({ loading: true, error: null });
-      const response = await api.get("/coupon/mycoupons");
-      console.log("Coupon response:", response.data);
+      const responseData = await fetchCouponsApi();
+      console.log("Coupon response:", responseData);
 
       // Extract nested coupon data
-      const formattedCoupons = response.data.coupon.map((item: any) => item.coupon);
+      const formattedCoupons = responseData.coupon.map((item: any) => item.coupon);
 
       set({
         coupons: formattedCoupons || [],

@@ -1,6 +1,17 @@
-import { useEffect, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
-import { Heart, ShoppingCart, CircleUserRound, Menu, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { NavLink, useNavigate, Link } from "react-router-dom";
+import {
+  Heart,
+  ShoppingCart,
+  Menu,
+  X,
+  ChevronDown,
+  Package,
+  Ticket,
+  LogOut,
+  ArrowRight,
+  ShieldCheck,
+} from "lucide-react";
 import userStore from "../../store/userStore";
 import { toast } from "react-toastify";
 import productStore from "../../store/productStore";
@@ -9,19 +20,35 @@ function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, logoutUser, fetchCurrentUser, isAuthChecking, token } = userStore();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const { user, logoutUser, isAuthChecking, token } = userStore();
   const { wishListProducts, cartItems } = productStore();
-  
-  
+
+  // Close user dropdown when clicking outside
   useEffect(() => {
-    const initializeUser = async () => {
-      await fetchCurrentUser();
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        userMenuOpen &&
+        userMenuRef.current &&
+        !userMenuRef.current.contains(event.target as Node) &&
+        userMenuTriggerRef.current &&
+        !userMenuTriggerRef.current.contains(event.target as Node)
+      ) {
+        setUserMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
     };
-    initializeUser();
-  }, []);
+  }, [userMenuOpen]);
 
   const logoutHandler = async () => {
     try {
+      setUserMenuOpen(false);
       const result = await logoutUser();
       if (result.success) {
         toast.success("Logout successful!");
@@ -34,248 +61,298 @@ function Navbar() {
   };
 
   return (
-    <>
-      <div className="w-full bg-white shadow-md sticky top-0 z-50">
-        <nav className="max-w-7xl mx-auto h-20 flex items-center justify-between px-4 sm:px-6 lg:px-8">
-          {/* LEFT SECTION */}
-          <div className="flex items-center space-x-4 sm:space-x-6 md:space-x-8">
-            {/* Logo */}
-
-            <div className="text-xl sm:text-2xl font-black tracking-tighter text-black cursor-pointer">
-              <NavLink to="/">DARAZ.LITE</NavLink>
-            </div>
-
-            {/* Desktop Nav Links */}
-            <div className="hidden md:flex items-center space-x-6 lg:space-x-8 text-sm font-medium">
-              <NavLink
-                to="/"
-                className="text-black hover:text-zinc-400 transition"
-              >
-                Home
-              </NavLink>
-              <NavLink
-                to="/categories"
-                className="text-black hover:text-zinc-400 transition"
-              >
-                Categories
-              </NavLink>
-              <NavLink
-                to="/orders"
-                className="text-black hover:text-zinc-400 transition"
-              >
-                Orders
-              </NavLink>
-              <NavLink
-                to="/coupon"
-                className="text-black hover:text-zinc-400 transition"
-              >
-                Coupons
-              </NavLink>
-            </div>
-          </div>
-
-          {/* RIGHT SECTION */}
-          <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 text-lg sm:text-xl">
-            {isAuthChecking ? (
-              <div className="flex items-center space-x-2 sm:space-x-3">
-                <div className="w-9 h-9 rounded-full bg-zinc-200 animate-pulse" />
-                <div className="w-9 h-9 rounded-full bg-zinc-200 animate-pulse" />
-                <div className="w-28 h-9 rounded-xl bg-zinc-200 animate-pulse hidden md:block" />
-              </div>
-            ) : token ? (
-              <>
-                <NavLink
-                  to="/wishlist"
-                  aria-label="Wishlist"
-                  className="relative group p-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-300 cursor-pointer"
-                >
-                  <Heart className="w-6 h-6 text-zinc-700 dark:text-zinc-300 group-hover:text-red-500 group-hover:scale-110 transition-all duration-300" />
-                  {wishListProducts.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-linear-to-br from-red-500 to-pink-600 text-white text-[10px] font-semibold min-w-5 h-5 px-1 rounded-full flex items-center justify-center shadow-lg shadow-red-500/50 ">
-                      {wishListProducts.length > 99
-                        ? "99+"
-                        : wishListProducts.length}
-                    </span>
-                  )}
-                </NavLink>
-
-                <NavLink
-                  to="/cart"
-                  aria-label="Shopping Cart"
-                  className="relative group p-2.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-300 cursor-pointer"
-                >
-                  <ShoppingCart className="w-6 h-6 text-zinc-700 dark:text-zinc-300 group-hover:text-blue-500 group-hover:scale-110 transition-all duration-300" />
-                  {cartItems.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-linear-to-br from-blue-500 to-indigo-600 text-white text-[10px] font-semibold min-w-5 h-5 px-1 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/50">
-                      {cartItems.length > 99 ? "99+" : cartItems.length}
-                    </span>
-                  )}
-                </NavLink>
-
-                <button
-                  aria-label="User Account"
-                  className="w-15 h-15 mt-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-all duration-300 cursor-pointer"
-                  onClick={() => {
-                    setUserMenuOpen(!userMenuOpen);
-                  }}
-                >
-                  {userMenuOpen ? (
-                    <div className="flex justify-center items-center">
-                      <X />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center">
-                      <CircleUserRound />
-                      <p className="text-sm ">
-                        {user?.username ? user.username.split(" ")[0].slice(0, 6) : "Account"}
-                      </p>
-                    </div>
-                  )}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  className="hidden md:block group relative px-5 md:px-8 py-2 bg-black text-white text-lg font-bold rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 cursor-pointer"
-                  onClick={() => navigate("/login")}
-                >
-                  <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-
-                  <span className="relative flex items-center space-x-2">
-                    <span>Get Started</span>
-                    <svg
-                      className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 8l4 4m0 0l-4 4m4-4H3"
-                      />
-                    </svg>
-                  </span>
-                </button>
-              </>
-            )}
-
-            {/* Mobile Menu Button */}
-            <button
-              aria-label="Open Menu"
-              className="md:hidden p-2 hover:text-zinc-400 transition cursor-pointer"
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              {menuOpen ? <X /> : <Menu />}
-            </button>
-          </div>
-        </nav>
-
-        {/* Mobile Dropdown Menu */}
-        <div
-          className={`md:hidden bg-white shadow-inner flex flex-col space-y-4 px-6 text-sm font-medium overflow-hidden transition-all duration-500 ease-in-out ${
-            menuOpen ? "max-h-72 py-4 opacity-100" : "max-h-0 py-0 opacity-0"
-          }`}
-        >
-          <NavLink
+    <header className="w-full bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-0 z-50 transition-all">
+      <nav className="max-w-7xl mx-auto h-18 sm:h-20 flex items-center justify-between px-4 sm:px-6 lg:px-8">
+        
+        {/* LEFT SECTION: Brand & Desktop Nav */}
+        <div className="flex items-center space-x-6 lg:space-x-10">
+          {/* Logo */}
+          <Link
             to="/"
-            onClick={() => setMenuOpen(false)}
-            className="text-black hover:text-zinc-400 transition"
+            className="flex items-center gap-1.5 text-xl sm:text-2xl font-black tracking-tight text-slate-900 group"
           >
-            Home
-          </NavLink>
-          <NavLink
-            to="/categories"
-            onClick={() => setMenuOpen(false)}
-            className="text-black hover:text-zinc-400 transition"
-          >
-            Categories
-          </NavLink>
-          <NavLink
-            to="/orders"
-            onClick={() => setMenuOpen(false)}
-            className="text-black hover:text-zinc-400 transition"
-          >
-            Orders
-          </NavLink>
-          <NavLink
-            to="/coupon"
-            onClick={() => setMenuOpen(false)}
-            className="text-black hover:text-zinc-400 transition"
-          >
-            Coupons
-          </NavLink>
+            <span>DARAZ</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-600 inline-block mb-1 group-hover:scale-125 transition-transform" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 self-end mb-1">
+              Lite
+            </span>
+          </Link>
 
-          {isAuthChecking ? (
-            <div className="w-44 h-11 bg-zinc-200 rounded-xl animate-pulse" />
-          ) : !token ? (
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                navigate("/login");
-              }}
-              className="md:hidden group relative w-44 px-5 md:px-8 py-2 bg-black text-white text-lg font-bold rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 cursor-pointer"
+          {/* Desktop Nav Links */}
+          <div className="hidden md:flex items-center space-x-1 text-sm font-medium">
+            <NavLink
+              to="/"
+              className={({ isActive }) =>
+                `px-3.5 py-2 rounded-lg transition-colors ${
+                  isActive
+                    ? "text-slate-900 font-semibold bg-slate-100"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`
+              }
             >
-              <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-
-              <span className="relative flex items-center space-x-2">
-                <span>Get Started</span>
-                <svg
-                  className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 8l4 4m0 0l-4 4m4-4H3"
-                  />
-                </svg>
-              </span>
-            </button>
-          ) : null}
-        </div>
-
-        {/* User menu for all screen */}
-        <div
-          className={`absolute top-20 right-4 bg-white w-64 shadow-lg flex flex-col space-y-4 px-4 py-2 text-sm font-medium rounded-xl overflow-hidden transition-all duration-300 ease-in-out ${
-            userMenuOpen && token
-              ? "max-h-64 opacity-100"
-              : "max-h-0 opacity-0"
-          }`}
-        >
-          <div className="w-full max-w-xs bg-linear-to-r from-gray-100 to-gray-50 shadow-lg rounded-2xl flex flex-col items-center justify-center p-6 space-y-3">
-            <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center text-2xl font-bold text-white">
-              {user?.username?.[0]?.toUpperCase()}
-            </div>
-
-            {/* Username */}
-            <p className="text-xl font-bold text-gray-800">{user?.username}</p>
-
-            {/* Email */}
-            <p className="text-sm font-medium text-gray-600 truncate w-full text-center">
-              {user?.email}
-            </p>
-
-            {/* Logout Button */}
-            <button
-              className="group relative px-10 py-1.5 bg-black text-white text-md font-semibold rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 cursor-pointer"
-              onClick={logoutHandler}
+              Home
+            </NavLink>
+            <NavLink
+              to="/categories"
+              className={({ isActive }) =>
+                `px-3.5 py-2 rounded-lg transition-colors ${
+                  isActive
+                    ? "text-slate-900 font-semibold bg-slate-100"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`
+              }
             >
-              {/* Shine effect */}
-              <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
-
-              <span className="relative flex items-center space-x-2">
-                <span>Logout</span>
-              </span>
-            </button>
+              Categories
+            </NavLink>
+            <NavLink
+              to="/orders"
+              className={({ isActive }) =>
+                `px-3.5 py-2 rounded-lg transition-colors ${
+                  isActive
+                    ? "text-slate-900 font-semibold bg-slate-100"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`
+              }
+            >
+              Orders
+            </NavLink>
+            <NavLink
+              to="/coupon"
+              className={({ isActive }) =>
+                `px-3.5 py-2 rounded-lg transition-colors ${
+                  isActive
+                    ? "text-slate-900 font-semibold bg-slate-100"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`
+              }
+            >
+              Coupons
+            </NavLink>
           </div>
         </div>
-      </div>
-    </>
+
+        {/* RIGHT SECTION: Actions & Profile */}
+        <div className="flex items-center space-x-2 sm:space-x-3">
+          {isAuthChecking ? (
+            /* Stable Loading Skeleton */
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />
+              <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />
+              <div className="w-24 h-10 rounded-full bg-slate-100 animate-pulse hidden sm:block" />
+            </div>
+          ) : token ? (
+            <>
+              {/* Wishlist Icon */}
+              <NavLink
+                to="/wishlist"
+                aria-label="Saved Wishlist"
+                className={({ isActive }) =>
+                  `relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 active:scale-95 group ${
+                    isActive
+                      ? "bg-rose-50 text-rose-600"
+                      : "text-slate-700 hover:text-rose-600 hover:bg-rose-50/70"
+                  }`
+                }
+              >
+                <Heart className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
+                {wishListProducts.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-rose-600 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center shadow-xs border-2 border-white">
+                    {wishListProducts.length > 99
+                      ? "99+"
+                      : wishListProducts.length}
+                  </span>
+                )}
+              </NavLink>
+
+              {/* Shopping Cart Icon */}
+              <NavLink
+                to="/cart"
+                aria-label="Shopping Cart"
+                className={({ isActive }) =>
+                  `relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 active:scale-95 group ${
+                    isActive
+                      ? "bg-slate-900 text-white"
+                      : "text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                  }`
+                }
+              >
+                <ShoppingCart className="w-5 h-5 transition-transform duration-200 group-hover:scale-110" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-slate-900 text-white text-[10px] font-bold min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center shadow-xs border-2 border-white">
+                    {cartItems.length > 99 ? "99+" : cartItems.length}
+                  </span>
+                )}
+              </NavLink>
+
+              {/* User Account Trigger Button */}
+              <div className="relative">
+                <button
+                  ref={userMenuTriggerRef}
+                  aria-label="User Account Menu"
+                  aria-expanded={userMenuOpen}
+                  onClick={() => setUserMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full border border-slate-200/90 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 active:scale-98 cursor-pointer focus:outline-none"
+                >
+                  <div className="w-7 h-7 rounded-full bg-linear-to-br from-slate-800 to-slate-950 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                    {user?.username ? user.username[0].toUpperCase() : "U"}
+                  </div>
+                  <span className="text-xs font-semibold text-slate-800 max-w-[80px] truncate hidden sm:inline">
+                    {user?.username ? user.username.split(" ")[0] : "Account"}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${
+                      userMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {/* Professional User Dropdown Menu Card */}
+                {userMenuOpen && (
+                  <div
+                    ref={userMenuRef}
+                    className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                  >
+                    {/* User Identity Header */}
+                    <div className="p-3 bg-slate-50/80 rounded-xl mb-1.5 flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-linear-to-br from-slate-900 to-slate-700 text-white flex items-center justify-center text-sm font-bold shadow-xs">
+                        {user?.username ? user.username[0].toUpperCase() : "U"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-slate-900 truncate">
+                            {user?.username || "Valued Customer"}
+                          </p>
+                          {user?.role === "admin" && (
+                            <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {user?.email || "No email provided"}
+                        </p>
+                        <span className="inline-block mt-1 text-[10px] font-medium text-slate-600 bg-white px-2 py-0.5 rounded-md border border-slate-200/80">
+                          {user?.role ? user.role.toUpperCase() : "CUSTOMER"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Navigation Items */}
+                    <div className="space-y-0.5 py-1">
+                      <Link
+                        to="/orders"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-black hover:bg-slate-100 transition-colors"
+                      >
+                        <Package className="w-4 h-4 text-slate-500" />
+                        <span>My Orders</span>
+                      </Link>
+
+                      <Link
+                        to="/wishlist"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-black hover:bg-slate-100 transition-colors"
+                      >
+                        <Heart className="w-4 h-4 text-rose-500" />
+                        <span>Saved Wishlist</span>
+                      </Link>
+
+                      <Link
+                        to="/coupon"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:text-black hover:bg-slate-100 transition-colors"
+                      >
+                        <Ticket className="w-4 h-4 text-amber-500" />
+                        <span>Discounts & Coupons</span>
+                      </Link>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="h-px bg-slate-100 my-1" />
+
+                    {/* Logout Button */}
+                    <button
+                      onClick={logoutHandler}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Log Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            /* Logged Out CTA */
+            <button
+              onClick={() => navigate("/login")}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-slate-900 text-white text-xs font-semibold hover:bg-black transition-all duration-200 shadow-xs hover:shadow cursor-pointer"
+            >
+              <span>Sign In</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            aria-label="Toggle Mobile Navigation"
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden flex items-center justify-center w-10 h-10 rounded-full text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+          >
+            {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Drawer Navigation */}
+      {menuOpen && (
+        <div className="md:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-3 shadow-lg animate-in slide-in-from-top-2 duration-150">
+          <div className="flex flex-col space-y-1">
+            <Link
+              to="/"
+              onClick={() => setMenuOpen(false)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
+            >
+              Home
+            </Link>
+            <Link
+              to="/categories"
+              onClick={() => setMenuOpen(false)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
+            >
+              Categories
+            </Link>
+            <Link
+              to="/orders"
+              onClick={() => setMenuOpen(false)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
+            >
+              Orders
+            </Link>
+            <Link
+              to="/coupon"
+              onClick={() => setMenuOpen(false)}
+              className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-100 transition-colors"
+            >
+              Coupons
+            </Link>
+          </div>
+
+          {!token && (
+            <div className="pt-2 border-t border-slate-100">
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  navigate("/login");
+                }}
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-black transition-all cursor-pointer"
+              >
+                <span>Sign In to Your Account</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </header>
   );
 }
 

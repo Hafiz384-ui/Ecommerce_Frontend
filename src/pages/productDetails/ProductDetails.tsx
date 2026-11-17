@@ -5,7 +5,7 @@ import ProductDetail from "../../components/productDetailComponents/ProductDetai
 import RatingReview from "../../components/productDetailComponents/RatingReview";
 import { useParams } from "react-router-dom";
 import productStore from "../../store/productStore";
-import Loader from "react-js-loader";
+import GlobalLoader from "../../components/ui/GlobalLoader";
 
 function ProductDetails() {
   const { productId, id } = useParams();
@@ -27,14 +27,7 @@ function ProductDetails() {
     <div className="w-full min-h-screen">
       <MainLayout>
         {loading ? (
-          <div className="flex justify-center my-5 min-h-[400px]">
-            <Loader
-              type="spinner-default"
-              bgColor="#000000"
-              color="#1D4ED8"
-              size={90}
-            />
-          </div>
+          <GlobalLoader fullScreen={false} message="Loading product details..." />
         ) : (
           <div>
             <DetailsSection />
