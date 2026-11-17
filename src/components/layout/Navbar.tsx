@@ -9,9 +9,8 @@ function Navbar() {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const { user, logoutUser, fetchCurrentUser } = userStore();
+  const { user, logoutUser, fetchCurrentUser, isAuthChecking, token } = userStore();
   const { wishListProducts, cartItems } = productStore();
-  const token = localStorage.getItem("token");
   
   
   useEffect(() => {
@@ -77,7 +76,13 @@ function Navbar() {
 
           {/* RIGHT SECTION */}
           <div className="flex items-center space-x-2 sm:space-x-3 md:space-x-4 text-lg sm:text-xl">
-            {token ? (
+            {isAuthChecking ? (
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-9 h-9 rounded-full bg-zinc-200 animate-pulse" />
+                <div className="w-9 h-9 rounded-full bg-zinc-200 animate-pulse" />
+                <div className="w-28 h-9 rounded-xl bg-zinc-200 animate-pulse hidden md:block" />
+              </div>
+            ) : token ? (
               <>
                 <NavLink
                   to="/wishlist"
@@ -114,14 +119,18 @@ function Navbar() {
                     setUserMenuOpen(!userMenuOpen);
                   }}
                 >
-                  {userMenuOpen ?
-                  <div className="flex justify-center items-center"><X /></div>
-                   
-                   : 
-                  <div className="flex flex-col items-center">
-                    <CircleUserRound />
-                    <p className="text-sm ">{user?.username?.split(" ")[0].slice(0,6)}</p>
-                  </div>}
+                  {userMenuOpen ? (
+                    <div className="flex justify-center items-center">
+                      <X />
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      <CircleUserRound />
+                      <p className="text-sm ">
+                        {user?.username ? user.username.split(" ")[0].slice(0, 6) : "Account"}
+                      </p>
+                    </div>
+                  )}
                 </button>
               </>
             ) : (
@@ -198,30 +207,36 @@ function Navbar() {
             Coupons
           </NavLink>
 
-          {!token && (
-            <>
-              <button className="md:hidden group relative w-44 px-5 md:px-8 py-2 bg-black text-white text-lg font-bold rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 cursor-pointer">
-                <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
+          {isAuthChecking ? (
+            <div className="w-44 h-11 bg-zinc-200 rounded-xl animate-pulse" />
+          ) : !token ? (
+            <button
+              onClick={() => {
+                setMenuOpen(false);
+                navigate("/login");
+              }}
+              className="md:hidden group relative w-44 px-5 md:px-8 py-2 bg-black text-white text-lg font-bold rounded-xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 cursor-pointer"
+            >
+              <span className="absolute inset-0 w-full h-full bg-linear-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></span>
 
-                <span className="relative flex items-center space-x-2">
-                  <span>Get Started</span>
-                  <svg
-                    className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 8l4 4m0 0l-4 4m4-4H3"
-                    />
-                  </svg>
-                </span>
-              </button>
-            </>
-          )}
+              <span className="relative flex items-center space-x-2">
+                <span>Get Started</span>
+                <svg
+                  className="w-5 h-5 transform group-hover:translate-x-2 transition-transform duration-300"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                  />
+                </svg>
+              </span>
+            </button>
+          ) : null}
         </div>
 
         {/* User menu for all screen */}

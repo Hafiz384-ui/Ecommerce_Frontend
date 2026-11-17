@@ -1,32 +1,14 @@
 import axios from "axios";
-import type { InternalAxiosRequestConfig, AxiosResponse } from "axios";
+import type { AxiosResponse } from "axios";
 
-// Map to store pending GET requests for deduplication
-const pendingRequests = new Map<string, AbortController>();
-
-/**
- * Generate a unique key for a request based on method, URL, parameters, and body.
- */
-const getRequestKey = (config: InternalAxiosRequestConfig): string => {
-  const { method, url, params, data } = config;
-  return [
-    method || "",
-    url || "",
-    JSON.stringify(params || ""),
-    JSON.stringify(data || ""),
-  ].join("&");
-};
-
-const addPendingRequest = (config: InternalAxiosRequestConfig): void => {
-  // GET request cancellation is disabled to prevent aborting concurrent requests 
-  // made by different components mounting at the same time.
+const addPendingRequest = (_config?: unknown): void => {
   return;
 };
 
 /**
  * Remove request from the pending requests map.
  */
-const removePendingRequest = (config: InternalAxiosRequestConfig): void => {
+const removePendingRequest = (_config?: unknown): void => {
   return;
 };
 
@@ -84,10 +66,25 @@ api.interceptors.response.use(
       error.config?.url?.includes("/user/register");
 
     if (error.response?.status === 401 && !isAuthEndpoint) {
+      // Silently clear local auth credentials
       localStorage.removeItem("token");
       localStorage.removeItem("tokenExpiry");
-      // Redirect to login page
-      window.location.href = "/login";
+
+      // Check current URL pathname to determine if on a public browsing route
+      const currentPath = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "";
+      const isPublicRoute =
+        currentPath === "/" ||
+        currentPath === "/categories" ||
+        currentPath === "/products" ||
+        currentPath.startsWith("/productdetails") ||
+        currentPath.startsWith("/product/") ||
+        currentPath === "/login" ||
+        currentPath === "/signup";
+
+      // Only redirect to login if the user was actively accessing a protected private route
+      if (!isPublicRoute) {
+        window.location.href = "/login";
+      }
     }
 
     return Promise.reject(error);

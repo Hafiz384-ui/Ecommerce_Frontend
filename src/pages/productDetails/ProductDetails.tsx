@@ -8,19 +8,20 @@ import productStore from "../../store/productStore";
 import Loader from "react-js-loader";
 
 function ProductDetails() {
-  const { productId } = useParams();
+  const { productId, id } = useParams();
+  const currentId = productId || id;
   const { findProduct, loading } = productStore();
   const [activeTab, setActiveTab] = useState<string>("details");
 
   useEffect(() => {
     const fetchProductById = () => {
       window.scrollTo(0, 0);
-      if (productId) {
-        findProduct(productId);
+      if (currentId) {
+        findProduct(currentId);
       }
     };
     fetchProductById();
-  }, [productId]);
+  }, [currentId]);
 
   return (
     <div className="w-full min-h-screen">

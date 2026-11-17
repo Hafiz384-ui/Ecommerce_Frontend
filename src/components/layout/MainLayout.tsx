@@ -1,27 +1,35 @@
-import type { ReactNode } from "react"
+import type { ReactNode } from "react";
 import Footer from "./Footer";
 import Navbar from "./Navbar";
 import { useEffect } from "react";
 import productStore from "../../store/productStore";
+import userStore from "../../store/userStore";
+
 interface MainLayoutProps {
   children: ReactNode;
 }
+
 function MainLayout({ children }: MainLayoutProps) {
-   const { fetchWishListItems, fetchCartItems } = productStore();
+  const { fetchWishListItems, fetchCartItems } = productStore();
+  const { token } = userStore();
 
   useEffect(() => {
-    fetchWishListItems();
-    fetchCartItems()
-    console.log("use effect is running...");
-    
-  }, []);
+    const localToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const expiry = typeof window !== "undefined" ? localStorage.getItem("tokenExpiry") : null;
+    const isExpired = expiry ? Date.now() > Number(expiry) : false;
+
+    if ((token || localToken) && !isExpired) {
+      fetchWishListItems();
+      fetchCartItems();
+    }
+  }, [token]);
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen bg-white">
       <Navbar />
-      <div>{children}</div>
+      <main className="flex-1 w-full min-h-screen flex flex-col">{children}</main>
       <Footer />
-    </>
+    </div>
   );
 }
 

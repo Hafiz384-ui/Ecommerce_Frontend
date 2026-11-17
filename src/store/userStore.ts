@@ -5,6 +5,7 @@ import type { User } from "../types/user";
 
 interface UserStore {
   loading: boolean;
+  isAuthChecking: boolean;
   error: string | null;
   message: string | null;
   user: User | null;
@@ -15,16 +16,22 @@ interface UserStore {
   loginUser: (
     data: User
   ) => Promise<{ success: boolean; data?: any; message?: string }>;
-  logoutUser: () => Promise<{ success: boolean;message?: string }>;
+  logoutUser: () => Promise<{ success: boolean; message?: string }>;
   fetchCurrentUser: () => Promise<void>;
 }
 
+const initialToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+const initialExpiry = typeof window !== "undefined" ? localStorage.getItem("tokenExpiry") : null;
+const isInitialExpired = initialExpiry ? Date.now() > Number(initialExpiry) : false;
+const hasInitialToken = Boolean(initialToken && !isInitialExpired);
+
 const userStore = create<UserStore>((set) => ({
   loading: false,
+  isAuthChecking: hasInitialToken,
   error: null,
   message: null,
   user: null,
-  token: null,
+  token: hasInitialToken ? initialToken : null,
 
   registerUser: async (data: User) => {
     try {
@@ -50,13 +57,13 @@ const userStore = create<UserStore>((set) => ({
     try {
       set({ loading: true, error: null });
       const response = await api.post("/user/login", data);
-      // console.log('user data in store', response.data.user);
       
       set({
         loading: false,
         error: null,
         user: response.data.user || null,
         token: response.data.token || null,
+        isAuthChecking: false,
         message: response.data.message || "Login successful!",
       });
       if (response.data.token) {
@@ -85,37 +92,56 @@ const userStore = create<UserStore>((set) => ({
   },
 
   logoutUser: async () => {
-  try {
-   
-    await api.post("/user/logout"); 
-    localStorage.removeItem("token");
-    localStorage.removeItem("tokenExpiry");
-    set({ user: null, token: null });
-    window.location.href = "/";
-
-    return { success: true };
-  } catch (error: any) {
-    if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
-    console.error("Logout failed:", error);
-    set({ loading: false });
-    return { success: false, message: error.message };
-  }
-},
-
-fetchCurrentUser: async () => {
-   set({ loading: true, error: null });
-    const token = localStorage.getItem("token");
-    if (!token) return;
     try {
-      const response = await api.get("/user/mydata");
-      set({ loading:false, error: null, user: response.data.user, token });
+      await api.post("/user/logout"); 
+      localStorage.removeItem("token");
+      localStorage.removeItem("tokenExpiry");
+      set({ user: null, token: null, isAuthChecking: false });
+      window.location.href = "/";
+
+      return { success: true };
     } catch (error: any) {
-      if (axios.isCancel(error)) return;
-      console.error("Failed to fetch user:", error);
-      set({loading: false, user: null, token: null });
+      if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
+      console.error("Logout failed:", error);
+      set({ loading: false });
+      return { success: false, message: error.message };
     }
   },
 
+  fetchCurrentUser: async () => {
+    const token = localStorage.getItem("token");
+    const expiry = localStorage.getItem("tokenExpiry");
+    const isExpired = expiry && Date.now() > Number(expiry);
+
+    if (!token || isExpired) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("tokenExpiry");
+      set({ isAuthChecking: false, loading: false, user: null, token: null });
+      return;
+    }
+
+    set({ isAuthChecking: true, loading: true, error: null });
+    try {
+      const response = await api.get("/user/mydata");
+      set({
+        isAuthChecking: false,
+        loading: false,
+        error: null,
+        user: response.data.user || null,
+        token,
+      });
+    } catch {
+      // Unauthenticated / expired token check fails gracefully without breaking public browsing
+      localStorage.removeItem("token");
+      localStorage.removeItem("tokenExpiry");
+      set({
+        isAuthChecking: false,
+        loading: false,
+        user: null,
+        token: null,
+      });
+    }
+  },
 }));
 
 export default userStore;

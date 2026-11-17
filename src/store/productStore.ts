@@ -147,6 +147,14 @@ const productStore = create<ProductStore>((set) => ({
   },
 
   fetchCartItems: async () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const expiry = typeof window !== "undefined" ? localStorage.getItem("tokenExpiry") : null;
+    const isExpired = expiry ? Date.now() > Number(expiry) : false;
+    if (!token || isExpired) {
+      set({ cartItems: [], productLoading: false });
+      return { success: false, message: "User not logged in" };
+    }
+
     try {
       set({ productLoading: true, error: null });
       const response = await api.get("/product/cartitems");
@@ -261,6 +269,14 @@ const productStore = create<ProductStore>((set) => ({
   },
 
   fetchWishListItems: async () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    const expiry = typeof window !== "undefined" ? localStorage.getItem("tokenExpiry") : null;
+    const isExpired = expiry ? Date.now() > Number(expiry) : false;
+    if (!token || isExpired) {
+      set({ wishListProducts: [], wishlistLoading: false });
+      return { success: false, message: "User not logged in" };
+    }
+
     try {
       set({ wishlistLoading: true, error: null });
       const response = await api.get("/product/getwishlist");
