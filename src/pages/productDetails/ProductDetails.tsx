@@ -10,7 +10,7 @@ import GlobalLoader from "../../components/ui/GlobalLoader";
 function ProductDetails() {
   const { productId, id } = useParams();
   const currentId = productId || id;
-  const { findProduct, loading } = productStore();
+  const { findProduct, productDetailLoading, currentProduct } = productStore();
   const [activeTab, setActiveTab] = useState<string>("details");
 
   useEffect(() => {
@@ -23,10 +23,12 @@ function ProductDetails() {
     fetchProductById();
   }, [currentId]);
 
+  const isInitialLoading = productDetailLoading || (!currentProduct && !!currentId);
+
   return (
     <div className="w-full min-h-screen">
       <MainLayout>
-        {loading ? (
+        {isInitialLoading ? (
           <GlobalLoader fullScreen={false} message="Loading product details..." />
         ) : (
           <div>

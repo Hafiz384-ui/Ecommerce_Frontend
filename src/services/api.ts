@@ -70,6 +70,11 @@ api.interceptors.response.use(
       localStorage.removeItem("token");
       localStorage.removeItem("tokenExpiry");
 
+      // Notify all stores and UI components to instantly clear user state without requiring page reload
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+      }
+
       // Check current URL pathname to determine if on a public browsing route
       const currentPath = typeof window !== "undefined" ? window.location.pathname.toLowerCase() : "";
       const isPublicRoute =

@@ -21,6 +21,8 @@ interface ProductStore {
   wishListProducts: Product[];
   message: string | null;
   loading: boolean;
+  productDetailLoading: boolean;
+  cartActionLoading: boolean;
   productLoading: boolean;
   wishlistLoading: boolean;
   categoryloading: boolean;
@@ -74,6 +76,8 @@ const productStore = create<ProductStore>((set) => ({
   currentProduct: null,
   wishListProducts: [],
   loading: false,
+  productDetailLoading: false,
+  cartActionLoading: false,
   productLoading: false,
   wishlistLoading: false,
   categoryloading: false,
@@ -121,35 +125,49 @@ const productStore = create<ProductStore>((set) => ({
   // Fetch single product by ID
   findProduct: async (id: string) => {
     try {
-      set({ loading: true, error: null });
+      set({ productDetailLoading: true, loading: true, error: null });
       const responseData = await findProductApi(id);
       set({
         currentProduct: responseData.product || null,
+        productDetailLoading: false,
         loading: false,
         error: null,
       });
     } catch (err: any) {
       if (axios.isCancel(err)) return;
-      set({ loading: false, error: err.message });
+      set({ productDetailLoading: false, loading: false, error: err.message });
     }
   },
 
   addToCart: async (data: Cart) => {
     try {
-      set({ loading: true, error: null });
+      set({ cartActionLoading: true, error: null });
+
+      // Smooth delay so the loader is clearly visible to the user as requested
+      // await new Promise((resolve) => setTimeout(resolve, 800));
+
       const responseData = await addToCartApi(data);
       console.log("add to cart response in store", responseData);
       const newCartItems = responseData.cart?.items || [];
-      set({ loading: false, error: null, message: responseData.message, cartItems: newCartItems });
+      set({
+        cartActionLoading: false,
+        error: null,
+        message: responseData.message,
+        cartItems: newCartItems,
+      });
       return {
         success: true,
         data: responseData,
-        message: responseData.message,
+        message: responseData.message || "Product added to cart successfully!",
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
-      const message = error.message;
-      set({ loading: false, error: message });
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to add product to cart";
+      set({ cartActionLoading: false, error: message });
       return { success: false, message };
     }
   },
@@ -190,13 +208,13 @@ const productStore = create<ProductStore>((set) => ({
 
   deleteCartItems: async (id: string) => {
     try {
-      set({ loading: true, error: null });
+      set({ cartActionLoading: true, error: null });
 
       const responseData = await deleteCartItemsApi(id);
       const updatedCartItems = responseData.cart?.items || [];
 
       set({
-        loading: false,
+        cartActionLoading: false,
         error: null,
         cartItems: updatedCartItems,
         message: responseData.message,
@@ -209,8 +227,12 @@ const productStore = create<ProductStore>((set) => ({
       };
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
-      const message = error.message;
-      set({ loading: false, error: message });
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to delete cart item";
+      set({ cartActionLoading: false, error: message });
       return { success: false, message };
     }
   },
@@ -362,5 +384,16 @@ const productStore = create<ProductStore>((set) => ({
     }
   },
 }));
+
+// Clear cart & wishlist when session is unauthorized / logged out
+if (typeof window !== "undefined") {
+  window.addEventListener("auth:unauthorized", () => {
+    productStore.setState({
+      cartItems: [],
+      wishListProducts: [],
+      cartThings: [],
+    });
+  });
+}
 
 export default productStore;

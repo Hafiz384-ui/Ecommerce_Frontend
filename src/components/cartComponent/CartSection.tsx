@@ -134,19 +134,24 @@ const CartSection: React.FC = () => {
 
   // Remove product
   const removeItem = async (id: string) => {
-    setUpdatingId(id);
-    const res = await deleteCartItems(id);
-    if (res.success) {
-      setLocalCart((prev) => {
-        const updatedCart = prev.filter((item) => item.id !== id);
-        productStore.setState({ cartThings: updatedCart });
-        return updatedCart;
-      });
-      toast.success(res.message || "Item removed from cart");
-    } else {
-      toast.error(res.message || "Failed to delete cart item");
+    try {
+      setUpdatingId(id);
+      const res = await deleteCartItems(id);      
+      if (res.success) {
+        setLocalCart((prev) => {
+          const updatedCart = prev.filter((item) => item.id !== id);
+          productStore.setState({ cartThings: updatedCart });
+          return updatedCart;
+        });
+        toast.success(res.message || "Item removed from cart successfully");
+      } else {
+        toast.error(res.message || "Failed to remove item from cart");
+      }
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to remove item from cart");
+    } finally {
+      setUpdatingId(null);
     }
-    setUpdatingId(null);
   };
 
   return (
@@ -344,9 +349,13 @@ const CartSection: React.FC = () => {
                     aria-label="Remove item"
                     onClick={() => removeItem(item.id)}
                     disabled={updatingId === item.id}
-                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-200 cursor-pointer disabled:opacity-40"
+                    className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all duration-200 cursor-pointer disabled:opacity-50 flex items-center justify-center min-w-[34px] min-h-[34px]"
                   >
-                    <Trash2 size={18} strokeWidth={1.75} />
+                    {updatingId === item.id ? (
+                      <div className="w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={18} strokeWidth={1.75} />
+                    )}
                   </button>
                 </div>
               </div>

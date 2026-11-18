@@ -23,9 +23,39 @@ function Navbar() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const userMenuTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const { user, logoutUser, isAuthChecking, token } = userStore();
+  const { user, logoutUser, isAuthChecking, token, clearAuth } = userStore();
   const { wishListProducts, cartItems } = productStore();
 
+  // Active auth sync: immediately clears stale in-memory user when token is removed or expired
+  useEffect(() => {
+    const syncAuth = () => {
+      const localToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      const expiry = typeof window !== "undefined" ? localStorage.getItem("tokenExpiry") : null;
+      const isExpired = expiry ? Date.now() > Number(expiry) : false;
+
+      // If token is missing from localStorage or expired, but Zustand still has user/token
+      if ((!localToken || isExpired) && (token || user)) {
+        clearAuth();
+      }
+    };
+
+    syncAuth();
+
+    const handleUnauthorized = () => {
+      clearAuth();
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    window.addEventListener("storage", syncAuth);
+    const interval = setInterval(syncAuth, 2000);
+
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+      window.removeEventListener("storage", syncAuth);
+      clearInterval(interval);
+    };
+  }, [token, user, clearAuth]);
+  
   // Close user dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -140,7 +170,7 @@ function Navbar() {
               <div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" />
               <div className="w-24 h-10 rounded-full bg-slate-100 animate-pulse hidden sm:block" />
             </div>
-          ) : token ? (
+          ) : (token && user) ? (
             <>
               {/* Wishlist Icon */}
               <NavLink
@@ -336,7 +366,7 @@ function Navbar() {
             </Link>
           </div>
 
-          {!token && (
+          {!(token && user) && (
             <div className="pt-2 border-t border-slate-100">
               <button
                 onClick={() => {

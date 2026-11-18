@@ -1,14 +1,19 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import { FaStar } from "react-icons/fa";
 import productStore from "../../store/productStore";
 import userStore from "../../store/userStore";
 import { Heart } from "lucide-react";
+import { showGlobalLoader, hideGlobalLoader } from "../../store/loadingStore";
 
 function DetailsSection() {
-  const navigate = useNavigate();
-  const { currentProduct, addToCart, addProductToWishList, wishListProducts } = productStore();
+  const {
+    currentProduct,
+    addToCart,
+    addProductToWishList,
+    wishListProducts,
+    cartActionLoading,
+  } = productStore();
   const { user } = userStore();
 
   const [mainImage, setMainImage] = useState("");
@@ -196,38 +201,35 @@ function DetailsSection() {
   // ADD TO CART
   const addToCartHandler = async () => {
     if (!currentProduct?._id) {
-      return toast.error("Invalid product.");
-    }
-
-    if (!variants.length) {
-      const data = {
-        productId: currentProduct._id,
-        variantId: null,
-        quantity,
-      };
-
-      const res = await addToCart(data as any);
-      if (res.success) toast.success("Product added to cart");
+      toast.error("Invalid product.");
       return;
     }
 
-    if (!selectedVariant?._id)
-      return toast.error("Please select a valid variant.");
+    if (variants.length > 0 && !selectedVariant?._id) {
+      toast.error("Please select a product variant (color / storage) first.");
+      return;
+    }
 
     const data = {
       productId: currentProduct._id,
-      variantId: selectedVariant._id,
+      variantId: selectedVariant?._id || null,
       quantity,
-      variantMaxQuantity: selectedVariant.quantity,
+      variantMaxQuantity: selectedVariant?.quantity,
     };
 
-    const result = await addToCart(data as any);
+    try {
+      showGlobalLoader("Adding to Cart...");
+      const result = await addToCart(data as any);
+      hideGlobalLoader();
 
-    if (result.success) {
-      toast.success(result.message || "Added to cart");
-      navigate(`/productDetails/${data.productId}`);
-    } else {
-      toast.error(result.message);
+      if (result.success) {
+        toast.success(result.message || "Product added to cart successfully!");
+      } else {
+        toast.error(result.message || "Failed to add product to cart");
+      }
+    } catch (err: any) {
+      hideGlobalLoader();
+      toast.error(err.message || "Something went wrong while adding to cart");
     }
   };
 
@@ -397,13 +399,27 @@ function DetailsSection() {
                 </div>
 
                 <button
-                  className="flex-1 bg-black text-white py-3 rounded-full mb-3 hover:bg-gray-800 transition cursor-pointer disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  className={`flex-1 bg-black text-white py-3 rounded-full mb-3 hover:bg-gray-800 transition cursor-pointer flex items-center justify-center gap-2 ${
+                    variants.length > 0 && selectedVariant && selectedVariant.quantity === 0
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : ""
+                  }`}
                   onClick={addToCartHandler}
-                  disabled={!selectedVariant || selectedVariant.quantity === 0}
+                  disabled={
+                    cartActionLoading ||
+                    Boolean(variants.length > 0 && selectedVariant && selectedVariant.quantity === 0)
+                  }
                 >
-                  {selectedVariant?.quantity === 0
-                    ? "Out of Stock"
-                    : "Add to Cart"}
+                  {cartActionLoading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Adding to Cart...</span>
+                    </>
+                  ) : variants.length > 0 && selectedVariant && selectedVariant.quantity === 0 ? (
+                    "Out of Stock"
+                  ) : (
+                    "Add to Cart"
+                  )}
                 </button>
 
                 <button
@@ -425,7 +441,7 @@ function DetailsSection() {
           </div>
         </div>
       </div>
-      <ToastContainer />
+      <ToastContainer position="top-right" autoClose={2000} />
     </>
   );
 }

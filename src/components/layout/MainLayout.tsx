@@ -4,6 +4,7 @@ import Navbar from "./Navbar";
 import { useEffect } from "react";
 import productStore from "../../store/productStore";
 import userStore from "../../store/userStore";
+import { ToastContainer } from "react-toastify";
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -29,6 +30,15 @@ function MainLayout({ children }: MainLayoutProps) {
       <Navbar />
       <main className="flex-1 w-full min-h-screen flex flex-col">{children}</main>
       <Footer />
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        pauseOnHover
+        theme="colored"
+      />
     </div>
   );
 }

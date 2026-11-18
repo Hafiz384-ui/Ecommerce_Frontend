@@ -23,6 +23,7 @@ interface UserStore {
   ) => Promise<{ success: boolean; data?: any; message?: string }>;
   logoutUser: () => Promise<{ success: boolean; message?: string }>;
   fetchCurrentUser: () => Promise<void>;
+  clearAuth: () => void;
 }
 
 const initialToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -74,16 +75,16 @@ const userStore = create<UserStore>((set) => ({
         message: responseData.message || "Login successful!",
       });
       if (responseData.token) {
-        const expiryTime: any = Date.now() + 7 * 24 * 60 * 60 * 1000;
-        await localStorage.setItem("token", responseData.token);
-        await localStorage.setItem("tokenExpiry", expiryTime);
+        const expiryDuration = 7 * 24 * 60 * 60 * 1000;
+        const expiryTime = Date.now() + expiryDuration;
+        localStorage.setItem("token", responseData.token);
+        localStorage.setItem("tokenExpiry", String(expiryTime));
 
         setTimeout(() => {
-          localStorage.removeItem("token");
-          localStorage.removeItem("tokenExpiry");
-          set({ user: null, token: null });
-          window.location.href = "/login";
-        }, expiryTime - Date.now());
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+          }
+        }, expiryDuration);
       }
       return {
         success: true,
@@ -159,6 +160,28 @@ const userStore = create<UserStore>((set) => ({
       });
     }
   },
+
+  clearAuth: () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("tokenExpiry");
+    }
+    hasVerifiedOnce = true;
+    set({
+      user: null,
+      token: null,
+      isAuthChecking: false,
+      loading: false,
+      error: null,
+    });
+  },
 }));
+
+// Listen for global 401 unauthorized events from Axios interceptor
+if (typeof window !== "undefined") {
+  window.addEventListener("auth:unauthorized", () => {
+    userStore.getState().clearAuth();
+  });
+}
 
 export default userStore;
