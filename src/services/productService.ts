@@ -38,14 +38,14 @@ export const fetchCartItemsApi = async () => {
 };
 
 export const deleteCartItemsApi = async (id: string) => {
-  const response = await api.get(`/product/deletecartitems/${id}`);
+  const response = await api.delete(`/product/deletecartitems/${id}`);
   return response.data;
 };
 
 // ─── Wishlist ────────────────────────────────────────────────────────
 
 export const addProductToWishListApi = async (id: string) => {
-  const response = await api.get(`/product/addtowishlist/${id}`);
+  const response = await api.post(`/product/addtowishlist/${id}`);
   return response.data;
 };
 
