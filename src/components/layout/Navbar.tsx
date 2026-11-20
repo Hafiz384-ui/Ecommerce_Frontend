@@ -39,20 +39,16 @@ function Navbar() {
       }
     };
 
-    syncAuth();
-
     const handleUnauthorized = () => {
       clearAuth();
     };
 
     window.addEventListener("auth:unauthorized", handleUnauthorized);
     window.addEventListener("storage", syncAuth);
-    const interval = setInterval(syncAuth, 2000);
 
     return () => {
       window.removeEventListener("auth:unauthorized", handleUnauthorized);
       window.removeEventListener("storage", syncAuth);
-      clearInterval(interval);
     };
   }, [token, user, clearAuth]);
   

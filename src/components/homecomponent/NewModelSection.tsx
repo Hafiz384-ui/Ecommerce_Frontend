@@ -77,6 +77,7 @@ function NewModelSection() {
                 cardTitle={val?.name}
                 cardPrice={val?.baseprice}
                 productId={val?._id}
+                priority={index < 4}
               />
             ))}
           </div>

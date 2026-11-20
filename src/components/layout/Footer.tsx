@@ -158,20 +158,40 @@ const Footer = () => {
           </p>
 
           <div className="flex items-center gap-4 mt-3 md:mt-0">
-            <img src={visa} alt="Visa" className="h-5 w-auto object-contain" />
+            <img
+              src={visa}
+              alt="Visa"
+              width={48}
+              height={20}
+              loading="lazy"
+              decoding="async"
+              className="h-5 w-auto object-contain"
+            />
             <img
               src={mastercard}
               alt="Mastercard"
+              width={48}
+              height={20}
+              loading="lazy"
+              decoding="async"
               className="h-5 w-auto object-contain"
             />
             <img
               src={paypal}
               alt="PayPal"
+              width={48}
+              height={20}
+              loading="lazy"
+              decoding="async"
               className="h-5 w-auto object-contain"
             />
             <img
               src={googlepay}
               alt="Google Pay"
+              width={48}
+              height={20}
+              loading="lazy"
+              decoding="async"
               className="h-5 w-auto object-contain"
             />
           </div>

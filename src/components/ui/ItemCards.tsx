@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import productStore from "../../store/productStore";
 import { toast } from "react-toastify";
 import userStore from "../../store/userStore";
+import { getOptimizedImageUrl, getCloudinarySrcSet } from "../../utils/imageOptimizer";
 
 interface ItemCardProps {
   cardImage: string;
@@ -11,6 +12,7 @@ interface ItemCardProps {
   cardPrice: number;
   productId: string;
   onWishToggle?: () => void;
+  priority?: boolean;
 }
 
 const ItemCards: React.FC<ItemCardProps> = ({
@@ -19,6 +21,7 @@ const ItemCards: React.FC<ItemCardProps> = ({
   cardPrice,
   productId,
   onWishToggle,
+  priority = false,
 }) => {
   const navigate = useNavigate();
   const { user } = userStore();
@@ -37,13 +40,11 @@ const ItemCards: React.FC<ItemCardProps> = ({
     try {
       setWish((prev) => !prev);
       const res = await addProductToWishList(id);
-      console.log('wish list res', res);
       
       if (!res.success) {
         setWish((prev) => !prev);
         toast.error(res.message || "Failed to update wishlist");
       } else {
-        console.log("Wishlist updated:", res.message);
         toast.success(res.message || "Wishlist updated successfully");
         if (onWishToggle) onWishToggle();
       }
@@ -53,38 +54,44 @@ const ItemCards: React.FC<ItemCardProps> = ({
     }
   };
 
+  const optimizedSrc = getOptimizedImageUrl(cardImage, 400);
+  const srcSet = getCloudinarySrcSet(cardImage, [280, 400, 600]);
+
   return (
     <div className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
       {/* Image Section with Overlay */}
-      <div className="relative w-full h-48 bg-gray-100 overflow-hidden">
+      <div className="relative w-full aspect-[4/3] bg-gray-100 overflow-hidden">
         <img
-          src={cardImage}
+          src={optimizedSrc || cardImage}
+          srcSet={srcSet || undefined}
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
           alt={cardTitle}
+          width={320}
+          height={240}
+          loading={priority ? "eager" : "lazy"}
+          decoding={priority ? "sync" : "async"}
+          fetchPriority={priority ? "high" : "auto"}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
 
         {/* Gradient Overlay on Hover */}
-        <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
         {/* Wishlist Icon - Positioned on Image */}
         {user?.email ? (
-          <>
-            <div className="absolute top-3 right-3 z-10">
-              <div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all duration-300">
-                <Heart
-                  className={`w-5 h-5 cursor-pointer transition-all duration-300 ${
-                    wish
-                      ? "fill-red-500 text-red-500"
-                      : "text-gray-700 hover:text-red-500"
-                  }`}
-                  onClick={() => addWishProductId(productId)}
-                />
-              </div>
+          <div className="absolute top-3 right-3 z-10">
+            <div className="bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md hover:bg-white hover:scale-110 transition-all duration-300">
+              <Heart
+                className={`w-5 h-5 cursor-pointer transition-all duration-300 ${
+                  wish
+                    ? "fill-red-500 text-red-500"
+                    : "text-gray-700 hover:text-red-500"
+                }`}
+                onClick={() => addWishProductId(productId)}
+              />
             </div>
-          </>
-        ) : (
-          <></>
-        )}
+          </div>
+        ) : null}
       </div>
 
       {/* Content Section */}
@@ -131,4 +138,4 @@ const ItemCards: React.FC<ItemCardProps> = ({
   );
 };
 
-export default ItemCards;
+export default memo(ItemCards);

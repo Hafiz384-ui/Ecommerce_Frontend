@@ -97,6 +97,10 @@ const HeroSection = () => {
               <img
                 src={image}
                 alt="Premium Electronics"
+                width={500}
+                height={520}
+                fetchPriority="high"
+                decoding="sync"
                 className="relative w-full h-72 sm:h-96 md:h-[500px] lg:h-[520px] rounded-2xl shadow-2xl transform group-hover:scale-[1.02] transition-transform duration-500 object-cover"
               />
 

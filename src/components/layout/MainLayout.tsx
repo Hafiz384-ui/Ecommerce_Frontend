@@ -11,7 +11,7 @@ interface MainLayoutProps {
 }
 
 function MainLayout({ children }: MainLayoutProps) {
-  const { fetchWishListItems, fetchCartItems } = productStore();
+  const { fetchWishListItems, fetchCartItems, cartItems, wishListProducts } = productStore();
   const { token } = userStore();
 
   useEffect(() => {
@@ -20,8 +20,12 @@ function MainLayout({ children }: MainLayoutProps) {
     const isExpired = expiry ? Date.now() > Number(expiry) : false;
 
     if ((token || localToken) && !isExpired) {
-      fetchWishListItems();
-      fetchCartItems();
+      if (wishListProducts.length === 0) {
+        fetchWishListItems();
+      }
+      if (cartItems.length === 0) {
+        fetchCartItems();
+      }
     }
   }, [token]);
 
