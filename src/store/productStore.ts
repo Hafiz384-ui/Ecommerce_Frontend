@@ -29,17 +29,37 @@ interface ProductStore {
   error: string | null;
   cartItems: any[];
   categoryItems: any[];
+  categoryPagination: {
+    totalProducts: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+  wishlistPagination: {
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
   summaryItems: any[];
   selectedCategory: string;
   discount: number | null;
   hasNextPage: boolean;
   nextPage: number;
+  totalProductsCount: number;
+  totalHomePages: number;
+  currentHomePage: number;
   cartLength: number;
   cartThings: any[];
   addItemsToSummary: (data: any[]) => void;
   setSelectedCategory: (cat: string) => void;
   fetchProductByCategory: (
-    id: string
+    id: string,
+    params?: { page?: number; limit?: number; search?: string; sort?: string }
   ) => Promise<{ success: boolean; message?: string; data?: any }>;
   fetchProducts: (
     page: number,
@@ -56,7 +76,7 @@ interface ProductStore {
   addProductToWishList: (
     id: string
   ) => Promise<{ success: boolean; message?: string }>;
-  fetchWishListItems: () => Promise<{
+  fetchWishListItems: (params?: { page?: number; limit?: number }) => Promise<{
     success: boolean;
     message?: string;
     data?: any;
@@ -90,6 +110,25 @@ const productStore = create<ProductStore>((set) => ({
   cartThings: [],
   selectedCategory: localStorage.getItem("selectedCategory") || "AllProducts",
   discount: null,
+  totalProductsCount: 0,
+  totalHomePages: 1,
+  currentHomePage: 1,
+  categoryPagination: {
+    totalProducts: 0,
+    totalPages: 1,
+    currentPage: 1,
+    limit: 5,
+    hasNextPage: false,
+    hasPrevPage: false,
+  },
+  wishlistPagination: {
+    totalItems: 0,
+    totalPages: 1,
+    currentPage: 1,
+    limit: 5,
+    hasNextPage: false,
+    hasPrevPage: false,
+  },
 
   setCartThings: (items: any) => set({ cartThings: items }),
 
@@ -107,7 +146,7 @@ const productStore = create<ProductStore>((set) => ({
     try {
       set({ loading: true, error: null });
       const responseData = await fetchProductsApi(page, limit);
-      const { docs, hasNextPage, nextPage } = responseData.products;
+      const { docs, hasNextPage, nextPage, totalDocs, totalPages } = responseData.products;
 
       set((state) => ({
         product: append ? [...state.product, ...docs] : docs,
@@ -115,6 +154,9 @@ const productStore = create<ProductStore>((set) => ({
         error: null,
         hasNextPage,
         nextPage: hasNextPage ? nextPage : 1,
+        totalProductsCount: totalDocs || 0,
+        totalHomePages: totalPages || 1,
+        currentHomePage: page,
       }));
     } catch (err: any) {
       if (axios.isCancel(err)) return;
@@ -242,18 +284,29 @@ const productStore = create<ProductStore>((set) => ({
     set({ selectedCategory: cat });
   },
 
-  fetchProductByCategory: async (category: string) => {
+  fetchProductByCategory: async (
+    category: string,
+    params?: { page?: number; limit?: number; search?: string; sort?: string }
+  ) => {
     try {
       set({ categoryloading: true, error: null });
-      const responseData = await fetchProductByCategoryApi(category);
+      const responseData = await fetchProductByCategoryApi(category, params);
       localStorage.setItem("selectedCategory", category);
-      console.log("categoryItems in store", responseData.products);
+
       set({
         categoryloading: false,
         error: null,
         message: responseData.message,
         categoryItems: responseData.products || [],
         selectedCategory: category,
+        categoryPagination: responseData.pagination || {
+          totalProducts: responseData.products?.length || 0,
+          totalPages: 1,
+          currentPage: params?.page || 1,
+          limit: params?.limit || 9,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
       });
       return {
         success: true,
@@ -270,17 +323,33 @@ const productStore = create<ProductStore>((set) => ({
 
   addProductToWishList: async (id: string) => {
     try {
-      set({ wishlistLoading: true, error: null });
       const responseData = await addProductToWishListApi(id);
-      const wishlistData = await fetchWishListItemsApi();
-      const wishlistItems = wishlistData.wishlistItems
-        .map((item: any) => item.product)
-        .filter(Boolean);
-      set({
-        wishlistLoading: false,
-        error: null,
-        wishListProducts: wishlistItems,
+
+      // Optimistic update of local wishlist state without extra API calls
+      set((state) => {
+        const isCurrentlyInWishlist = state.wishListProducts.some((p) => p._id === id);
+        let updatedList = [...state.wishListProducts];
+
+        if (responseData.action === "removed" || isCurrentlyInWishlist) {
+          updatedList = updatedList.filter((p) => p._id !== id);
+        } else if (responseData.action === "added" && responseData.product) {
+          updatedList = [responseData.product, ...updatedList];
+        }
+
+        const totalItems = responseData.action === "removed"
+          ? Math.max(0, state.wishlistPagination.totalItems - 1)
+          : state.wishlistPagination.totalItems + 1;
+
+        return {
+          wishListProducts: updatedList,
+          wishlistPagination: {
+            ...state.wishlistPagination,
+            totalItems,
+            totalPages: Math.ceil(totalItems / (state.wishlistPagination.limit || 8)) || 1,
+          },
+        };
       });
+
       return {
         success: true,
         message: responseData.message,
@@ -289,12 +358,11 @@ const productStore = create<ProductStore>((set) => ({
     } catch (error: any) {
       if (axios.isCancel(error)) return { success: false, message: "Request cancelled" };
       const message = error.message;
-      set({ wishlistLoading: false, error: message });
       return { success: false, message };
     }
   },
 
-  fetchWishListItems: async () => {
+  fetchWishListItems: async (params?: { page?: number; limit?: number }) => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
     const expiry = typeof window !== "undefined" ? localStorage.getItem("tokenExpiry") : null;
     const isExpired = expiry ? Date.now() > Number(expiry) : false;
@@ -305,17 +373,25 @@ const productStore = create<ProductStore>((set) => ({
 
     try {
       set({ wishlistLoading: true, error: null });
-      const responseData = await fetchWishListItemsApi();
-      console.log("wish list items", responseData);
+      const responseData = await fetchWishListItemsApi(params);
 
       const wishlistItems = responseData?.wishlistItems
         ?.map((item: any) => item.product)
         .filter(Boolean) || [];
+
       set({
         wishlistLoading: false,
         error: null,
         message: responseData?.message,
         wishListProducts: wishlistItems,
+        wishlistPagination: responseData?.pagination || {
+          totalItems: wishlistItems.length,
+          totalPages: 1,
+          currentPage: params?.page || 1,
+          limit: params?.limit || 8,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
       });
       return {
         success: true,

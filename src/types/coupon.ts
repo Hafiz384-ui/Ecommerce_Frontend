@@ -1,8 +1,13 @@
 interface Coupon {
-  code: String;
+  _id?: string;
+  code: string;
   discountValue: number;
-  expiryDate: Date;
-  isActive: Boolean;
+  expiryDate: Date | string;
+  isActive: boolean;
+  isUsed?: boolean;
+  isExpired?: boolean;
+  status?: "ACTIVE" | "USED" | "EXPIRED" | "DISABLED";
+  statusLabel?: string;
 }
 
 export type { Coupon };

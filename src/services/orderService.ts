@@ -10,7 +10,12 @@ export const createOrderApi = async (data: Order) => {
   return response.data;
 };
 
-export const fetchOrdersApi = async () => {
-  const response = await api.get("/order/getorder");
+export const fetchOrdersApi = async (params?: {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+}) => {
+  const response = await api.get("/order/getorder", { params });
   return response.data;
 };

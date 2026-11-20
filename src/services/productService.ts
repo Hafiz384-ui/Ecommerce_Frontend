@@ -20,8 +20,13 @@ export const findProductApi = async (id: string) => {
   return response.data;
 };
 
-export const fetchProductByCategoryApi = async (category: string) => {
-  const response = await api.get(`/product/getproductsbycategory/${category}`);
+export const fetchProductByCategoryApi = async (
+  category: string,
+  params?: { page?: number; limit?: number; search?: string; sort?: string }
+) => {
+  const response = await api.get(`/product/getproductsbycategory/${category}`, {
+    params,
+  });
   return response.data;
 };
 
@@ -49,8 +54,8 @@ export const addProductToWishListApi = async (id: string) => {
   return response.data;
 };
 
-export const fetchWishListItemsApi = async () => {
-  const response = await api.get("/product/getwishlist");
+export const fetchWishListItemsApi = async (params?: { page?: number; limit?: number }) => {
+  const response = await api.get("/product/getwishlist", { params });
   return response.data;
 };
 

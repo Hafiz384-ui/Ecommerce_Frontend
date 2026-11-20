@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import orderStore from "../../store/orderStore";
+import Pagination from "./Pagination";
 import {
   PackageCheck,
   Truck,
@@ -14,6 +15,7 @@ import {
   Copy,
   Check,
   Star,
+  X,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -30,18 +32,42 @@ const TRACKING_STEPS = [
 ];
 
 const OrderTrackingCard: React.FC<IProps> = ({ onOpen }) => {
-  const { fetchOrder, Orders, loading } = orderStore();
+  const { fetchOrder, Orders, loading, orderPagination } = orderStore();
   const [filterTab, setFilterTab] = useState<string>("all");
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [searchInput, setSearchInput] = useState<string>("");
+  const [debouncedSearch, setDebouncedSearch] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const isFirstMount = useRef(true);
 
+  // Debounce search query (350ms)
   useEffect(() => {
-    const fetchOrders = async () => {
-      window.scrollTo(0, 0);
-      await fetchOrder();
-    };
-    fetchOrders();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setCurrentPage(1);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  // Load orders with backend-driven pagination & filtering
+  useEffect(() => {
+    fetchOrder({
+      page: currentPage,
+      limit: 5,
+      status: filterTab,
+      search: debouncedSearch,
+    });
+
+    if (!isFirstMount.current) {
+      window.scrollTo({ top: 120, behavior: "smooth" });
+    }
+    isFirstMount.current = false;
+  }, [currentPage, filterTab, debouncedSearch]);
+
+  const handleTabChange = (newTab: string) => {
+    setFilterTab(newTab);
+    setCurrentPage(1);
+  };
 
   const copyOrderId = (id: string) => {
     navigator.clipboard.writeText(id);
@@ -50,37 +76,9 @@ const OrderTrackingCard: React.FC<IProps> = ({ onOpen }) => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Filtered orders list
-  const filteredOrders = useMemo(() => {
-    let list = Array.isArray(Orders) ? [...Orders] : [];
-
-    // Tab filter
-    if (filterTab === "active") {
-      list = list.filter(
-        (o) =>
-          o.status === "Pending" ||
-          o.status === "Processing" ||
-          o.status === "Shipped" ||
-          (o.status as any) === "Placed"
-      );
-    } else if (filterTab === "delivered") {
-      list = list.filter((o) => o.status === "Delivered");
-    } else if (filterTab === "cancelled") {
-      list = list.filter((o) => o.status === "Cancelled");
-    }
-
-    // Search query filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (o) =>
-          o._id?.toLowerCase().includes(q) ||
-          o.items?.some((item) => item.name?.toLowerCase().includes(q))
-      );
-    }
-
-    return list;
-  }, [Orders, filterTab, searchQuery]);
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   return (
     <div className="w-full flex flex-col space-y-6">
@@ -89,51 +87,23 @@ const OrderTrackingCard: React.FC<IProps> = ({ onOpen }) => {
         {/* Filter Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100/90 rounded-2xl w-fit">
           {[
-            { id: "all", label: "All Orders", count: Orders?.length || 0 },
-            {
-              id: "active",
-              label: "In Transit",
-              count:
-                Orders?.filter(
-                  (o) =>
-                    o.status === "Pending" ||
-                    o.status === "Processing" ||
-                    o.status === "Shipped" ||
-                    (o.status as any) === "Placed"
-                ).length || 0,
-            },
-            {
-              id: "delivered",
-              label: "Delivered",
-              count: Orders?.filter((o) => o.status === "Delivered").length || 0,
-            },
-            {
-              id: "cancelled",
-              label: "Cancelled",
-              count: Orders?.filter((o) => o.status === "Cancelled").length || 0,
-            },
+            { id: "all", label: "All Orders" },
+            { id: "active", label: "In Transit" },
+            { id: "delivered", label: "Delivered" },
+            { id: "cancelled", label: "Cancelled" },
           ].map((tab) => {
             const active = filterTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setFilterTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
+                onClick={() => handleTabChange(tab.id)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
                   active
-                    ? "bg-white text-slate-900 shadow-xs"
+                    ? "bg-white text-slate-900 shadow-xs font-bold"
                     : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <span>{tab.label}</span>
-                <span
-                  className={`text-[11px] px-1.5 py-0.2 rounded-full font-bold ${
-                    active
-                      ? "bg-slate-100 text-slate-800"
-                      : "bg-slate-200/60 text-slate-500"
-                  }`}
-                >
-                  {tab.count}
-                </span>
               </button>
             );
           })}
@@ -145,10 +115,19 @@ const OrderTrackingCard: React.FC<IProps> = ({ onOpen }) => {
           <input
             type="text"
             placeholder="Search by Order ID or item..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full sm:w-64 pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:border-black focus:bg-white transition-all"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            className="w-full sm:w-64 pl-9 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:border-black focus:bg-white transition-all"
           />
+          {searchInput && (
+            <button
+              type="button"
+              onClick={() => setSearchInput("")}
+              className="absolute right-2.5 text-slate-400 hover:text-slate-600"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -190,10 +169,10 @@ const OrderTrackingCard: React.FC<IProps> = ({ onOpen }) => {
             </div>
           ))}
         </div>
-      ) : filteredOrders.length > 0 ? (
+      ) : Orders.length > 0 ? (
         /* Orders List */
         <div className="space-y-6">
-          {filteredOrders.map((order, orderIdx) => {
+          {Orders.map((order, orderIdx) => {
             const rawStatus = order.status as string;
             const normalizedStatus =
               rawStatus === "Placed" ? "Pending" : rawStatus;
@@ -449,6 +428,14 @@ const OrderTrackingCard: React.FC<IProps> = ({ onOpen }) => {
               </div>
             );
           })}
+
+          {/* Backend Page-by-Page Pagination */}
+          <Pagination
+            currentPage={orderPagination?.currentPage || currentPage}
+            totalPages={orderPagination?.totalPages || 1}
+            onPageChange={handlePageChange}
+            isLoading={loading}
+          />
         </div>
       ) : (
         /* Empty State */
@@ -457,12 +444,12 @@ const OrderTrackingCard: React.FC<IProps> = ({ onOpen }) => {
             <PackageOpen size={38} strokeWidth={1.5} />
           </div>
           <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            {searchQuery || filterTab !== "all"
+            {searchInput || filterTab !== "all"
               ? "No matching orders found"
               : "No orders placed yet"}
           </h3>
           <p className="mt-2 text-sm text-slate-500 max-w-sm">
-            {searchQuery || filterTab !== "all"
+            {searchInput || filterTab !== "all"
               ? "Try adjusting your search query or switching to another status tab."
               : "When you purchase items, your order history and tracking updates will appear here."}
           </p>

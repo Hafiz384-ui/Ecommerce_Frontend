@@ -38,7 +38,7 @@ function FilterSection() {
     setSelectedCategory(category);
     setIsOpen(false);
 
-    const res = await fetchProductByCategory(category);
+    const res = await fetchProductByCategory(category, { page: 1, limit: 9 });
     if (!res.success) toast.error(res.message || "Failed to load category products");
   };
 

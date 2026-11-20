@@ -1,27 +1,38 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Heart, ShoppingBag, ArrowRight, AlertCircle, RefreshCw, ChevronRight } from "lucide-react";
 import productStore from "../../store/productStore";
 import ItemCards from "../ui/ItemCards";
+import Pagination from "../ui/Pagination";
 
 function WishProducts() {
   const navigate = useNavigate();
-  const { fetchWishListItems, wishlistLoading, wishListProducts } = productStore();
+  const { fetchWishListItems, wishlistLoading, wishListProducts, wishlistPagination } =
+    productStore();
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
+  const isFirstMount = useRef(true);
 
-  const loadWishlist = async () => {
+  const loadWishlist = async (page = currentPage) => {
     try {
       setError(null);
-      await fetchWishListItems();
+      await fetchWishListItems({ page, limit: 8 });
     } catch (err: any) {
       setError("Failed to load wishlist items. Please try again.");
     }
   };
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-    loadWishlist();
-  }, []);
+    loadWishlist(currentPage);
+    if (!isFirstMount.current) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    isFirstMount.current = false;
+  }, [currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
   return (
     <div className="w-full bg-[#FBFBFC] py-8 sm:py-12 min-h-screen">
@@ -45,7 +56,8 @@ function WishProducts() {
               </h1>
               {!wishlistLoading && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100">
-                  {wishListProducts?.length || 0} {wishListProducts?.length === 1 ? "item" : "items"}
+                  {wishlistPagination?.totalItems ?? wishListProducts?.length ?? 0}{" "}
+                  {(wishlistPagination?.totalItems ?? wishListProducts?.length ?? 0) === 1 ? "item" : "items"}
                 </span>
               )}
             </div>
@@ -57,7 +69,7 @@ function WishProducts() {
           {wishListProducts?.length > 0 && !wishlistLoading && (
             <button
               onClick={() => navigate("/categories")}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-black transition-colors"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 hover:text-black transition-colors cursor-pointer"
             >
               <span>Continue Shopping</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -76,7 +88,7 @@ function WishProducts() {
             </h3>
             <p className="text-sm text-slate-500 mb-6">{error}</p>
             <button
-              onClick={loadWishlist}
+              onClick={() => loadWishlist(currentPage)}
               className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 text-white text-xs font-semibold hover:bg-black transition-all cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -121,18 +133,28 @@ function WishProducts() {
             </button>
           </div>
         ) : (
-          /* Wishlist Items Grid */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {wishListProducts.map((product, index) => (
-              <ItemCards
-                key={product?._id || index}
-                cardImage={product?.images?.[0]}
-                cardTitle={product?.name}
-                cardPrice={product?.baseprice}
-                productId={product?._id}
-                onWishToggle={loadWishlist}
-              />
-            ))}
+          /* Wishlist Items Grid with Pagination */
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {wishListProducts.map((product, index) => (
+                <ItemCards
+                  key={product?._id || index}
+                  cardImage={product?.images?.[0]}
+                  cardTitle={product?.name}
+                  cardPrice={product?.baseprice}
+                  productId={product?._id}
+                  onWishToggle={() => loadWishlist(currentPage)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination Component */}
+            <Pagination
+              currentPage={wishlistPagination?.currentPage || currentPage}
+              totalPages={wishlistPagination?.totalPages || 1}
+              onPageChange={handlePageChange}
+              isLoading={wishlistLoading}
+            />
           </div>
         )}
       </div>

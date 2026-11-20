@@ -23,8 +23,16 @@ const couponStore = create<CouponStore>((set) => ({
       const responseData = await fetchCouponsApi();
       console.log("Coupon response:", responseData);
 
-      // Extract nested coupon data
-      const formattedCoupons = responseData.coupon.map((item: any) => item.coupon);
+      // Support both new enhanced objects or fallback legacy array
+      const rawCoupons = Array.isArray(responseData?.coupon) ? responseData.coupon : [];
+      const formattedCoupons = rawCoupons.map((item: any) => {
+        // If backend already formatted it directly into an enhanced coupon object
+        if (item.code && item.discountValue !== undefined) {
+          return item;
+        }
+        // Fallback if raw populated doc
+        return item.coupon || item;
+      });
 
       set({
         coupons: formattedCoupons || [],

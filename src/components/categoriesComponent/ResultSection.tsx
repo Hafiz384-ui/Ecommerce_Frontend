@@ -1,14 +1,8 @@
 import ItemCards from "../ui/ItemCards";
+import Pagination from "../ui/Pagination";
 import productStore from "../../store/productStore";
-import { useEffect, useMemo, useState } from "react";
-import { Search, ArrowUpDown, PackageOpen, RotateCcw } from "lucide-react";
-
-interface CardItem {
-  images: string[];
-  name: string;
-  baseprice: number;
-  _id: string;
-}
+import { useEffect, useState, useRef } from "react";
+import { Search, ArrowUpDown, PackageOpen, RotateCcw, X } from "lucide-react";
 
 const CATEGORY_NAMES: Record<string, string> = {
   AllProducts: "All Products",
@@ -26,56 +20,62 @@ function ResultSection() {
     selectedCategory,
     setSelectedCategory,
     categoryloading,
+    categoryPagination,
   } = productStore();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [sortBy, setSortBy] = useState<string>("featured");
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const isFirstMount = useRef(true);
 
+  // Debounce search input for seamless backend querying (350ms)
   useEffect(() => {
-    const init = async () => {
-      window.scrollTo(0, 0);
-      const category =
-        selectedCategory ||
-        localStorage.getItem("selectedCategory") ||
-        "AllProducts";
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+      setCurrentPage(1); // reset to page 1 on new search
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-      if (!categoryItems.length) {
-        await fetchProductByCategory(category);
-      }
-    };
-    init();
-  }, []);
+  // Main data loader triggered on category, page, search, or sort change
+  useEffect(() => {
+    const category =
+      selectedCategory ||
+      localStorage.getItem("selectedCategory") ||
+      "AllProducts";
+
+    fetchProductByCategory(category, {
+      page: currentPage,
+      limit: 5,
+      search: debouncedSearch,
+      sort: sortBy,
+    });
+
+    if (!isFirstMount.current) {
+      window.scrollTo({ top: 180, behavior: "smooth" });
+    }
+    isFirstMount.current = false;
+  }, [selectedCategory, currentPage, debouncedSearch, sortBy]);
 
   const activeCategory = selectedCategory || "AllProducts";
   const categoryTitle = CATEGORY_NAMES[activeCategory] || activeCategory;
 
-  // Filter and sort items
-  const filteredAndSortedItems = useMemo(() => {
-    let list: CardItem[] = Array.isArray(categoryItems) ? [...categoryItems] : [];
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
 
-    // Search query filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter((item) => item.name?.toLowerCase().includes(q));
-    }
-
-    // Sorting
-    if (sortBy === "price-low") {
-      list.sort((a, b) => (a.baseprice || 0) - (b.baseprice || 0));
-    } else if (sortBy === "price-high") {
-      list.sort((a, b) => (b.baseprice || 0) - (a.baseprice || 0));
-    } else if (sortBy === "name-asc") {
-      list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
-    }
-
-    return list;
-  }, [categoryItems, searchQuery, sortBy]);
+  const handleSortChange = (newSort: string) => {
+    setSortBy(newSort);
+    setCurrentPage(1); // reset to page 1 on sort change
+  };
 
   const handleResetFilters = async () => {
-    setSearchQuery("");
+    setSearchInput("");
+    setDebouncedSearch("");
     setSortBy("featured");
+    setCurrentPage(1);
     setSelectedCategory("AllProducts");
-    await fetchProductByCategory("AllProducts");
   };
 
   return (
@@ -89,8 +89,10 @@ function ResultSection() {
             </h2>
             {!categoryloading && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
-                {filteredAndSortedItems.length}{" "}
-                {filteredAndSortedItems.length === 1 ? "product" : "products"}
+                {categoryPagination?.totalProducts ?? categoryItems.length}{" "}
+                {(categoryPagination?.totalProducts ?? categoryItems.length) === 1
+                  ? "product"
+                  : "products"}
               </span>
             )}
           </div>
@@ -106,11 +108,20 @@ function ResultSection() {
             <Search size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Filter products..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-52 pl-9 pr-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:border-black focus:bg-white transition-all"
+              placeholder="Search products..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="w-full sm:w-56 pl-9 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder-slate-400 font-medium focus:outline-none focus:border-black focus:bg-white transition-all"
             />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput("")}
+                className="absolute right-2.5 text-slate-400 hover:text-slate-600"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
           {/* Sort Dropdown */}
@@ -118,13 +129,13 @@ function ResultSection() {
             <ArrowUpDown size={14} className="absolute left-3 text-slate-400 pointer-events-none" />
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full sm:w-44 pl-8 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:border-black focus:bg-white transition-all appearance-none cursor-pointer"
+              onChange={(e) => handleSortChange(e.target.value)}
+              className="w-full sm:w-48 pl-8 pr-8 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-800 font-semibold focus:outline-none focus:border-black focus:bg-white transition-all appearance-none cursor-pointer"
             >
-              <option value="featured">Featured</option>
+              <option value="featured">Featured / Newest</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
-              <option value="name-asc">Name: A to Z</option>
+              <option value="name-asc">Alphabetical: A to Z</option>
             </select>
           </div>
         </div>
@@ -154,19 +165,29 @@ function ResultSection() {
             </div>
           ))}
         </div>
-      ) : filteredAndSortedItems.length > 0 ? (
-        /* Rendered Products Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-          {filteredAndSortedItems.map((val, index) => (
-            <ItemCards
-              key={val._id || index}
-              cardImage={val.images?.[0] || ""}
-              cardTitle={val.name}
-              cardPrice={val.baseprice}
-              productId={val._id}
-            />
-          ))}
-        </div>
+      ) : categoryItems.length > 0 ? (
+        <>
+          {/* Rendered Products Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+            {categoryItems.map((val: any, index: number) => (
+              <ItemCards
+                key={val._id || index}
+                cardImage={val.images?.[0] || ""}
+                cardTitle={val.name}
+                cardPrice={val.baseprice}
+                productId={val._id}
+              />
+            ))}
+          </div>
+
+          {/* Backend Page-by-Page Pagination */}
+          <Pagination
+            currentPage={categoryPagination?.currentPage || currentPage}
+            totalPages={categoryPagination?.totalPages || 1}
+            onPageChange={handlePageChange}
+            isLoading={categoryloading}
+          />
+        </>
       ) : (
         /* Empty State */
         <div className="w-full bg-white rounded-3xl border border-slate-200/80 p-12 sm:p-16 flex flex-col items-center justify-center text-center shadow-xs">
@@ -177,11 +198,12 @@ function ResultSection() {
             No products match your criteria
           </h3>
           <p className="mt-2 text-sm text-slate-500 max-w-sm">
-            {searchQuery
-              ? `No items found matching "${searchQuery}". Try adjusting your keywords or clearing the search.`
+            {searchInput
+              ? `No items found matching "${searchInput}". Try adjusting your keywords or clearing the search.`
               : "There are currently no products listed under this category. Please check back soon."}
           </p>
           <button
+            type="button"
             onClick={handleResetFilters}
             className="mt-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-black text-white text-sm font-bold shadow-md hover:bg-slate-800 transition-all duration-300 hover:scale-[1.02] cursor-pointer"
           >

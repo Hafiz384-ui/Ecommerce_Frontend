@@ -75,12 +75,15 @@ function Coupon() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
               {coupons.map((coupon, index) => (
                 <CouponCard
-                  key={index}
+                  key={coupon?._id || index}
                   index={index}
                   isActive={coupon?.isActive}
                   code={coupon?.code}
                   discount={coupon?.discountValue}
                   expiry={coupon?.expiryDate}
+                  isUsed={coupon?.isUsed}
+                  status={coupon?.status}
+                  statusLabel={coupon?.statusLabel}
                 />
               ))}
             </div>

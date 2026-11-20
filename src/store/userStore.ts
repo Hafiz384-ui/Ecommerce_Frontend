@@ -32,6 +32,32 @@ const isInitialExpired = initialExpiry ? Date.now() > Number(initialExpiry) : fa
 const hasInitialToken = Boolean(initialToken && !isInitialExpired);
 
 let hasVerifiedOnce = false;
+let autoLogoutTimer: ReturnType<typeof setTimeout> | null = null;
+
+const scheduleAutoLogout = (expiryTime: number) => {
+  if (typeof window === "undefined") return;
+  if (autoLogoutTimer) {
+    clearTimeout(autoLogoutTimer);
+    autoLogoutTimer = null;
+  }
+
+  const remainingMs = expiryTime - Date.now();
+  if (remainingMs <= 0) {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    return;
+  }
+
+  // Cap setTimeout to ~24 days to avoid 32-bit integer overflow in Node/browsers (2147483647 ms)
+  const safeTimeoutMs = Math.min(remainingMs, 2147483647);
+  autoLogoutTimer = setTimeout(() => {
+    window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+  }, safeTimeoutMs);
+};
+
+// If page reloads and a valid unexpired token exists, resume the auto-logout timer immediately!
+if (hasInitialToken && initialExpiry) {
+  scheduleAutoLogout(Number(initialExpiry));
+}
 
 const userStore = create<UserStore>((set) => ({
   loading: false,
@@ -80,11 +106,7 @@ const userStore = create<UserStore>((set) => ({
         localStorage.setItem("token", responseData.token);
         localStorage.setItem("tokenExpiry", String(expiryTime));
 
-        setTimeout(() => {
-          if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("auth:unauthorized"));
-          }
-        }, expiryDuration);
+        scheduleAutoLogout(expiryTime);
       }
       return {
         success: true,
@@ -101,6 +123,10 @@ const userStore = create<UserStore>((set) => ({
 
   logoutUser: async () => {
     try {
+      if (autoLogoutTimer) {
+        clearTimeout(autoLogoutTimer);
+        autoLogoutTimer = null;
+      }
       await logoutUserApi();
       localStorage.removeItem("token");
       localStorage.removeItem("tokenExpiry");
@@ -162,6 +188,10 @@ const userStore = create<UserStore>((set) => ({
   },
 
   clearAuth: () => {
+    if (autoLogoutTimer) {
+      clearTimeout(autoLogoutTimer);
+      autoLogoutTimer = null;
+    }
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
       localStorage.removeItem("tokenExpiry");
