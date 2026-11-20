@@ -7,11 +7,11 @@ import type {
 import { Eye, EyeOff, ShoppingCart } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import * as Yup from "yup";
-import Loader from "react-js-loader";
 import Input from "../../components/ui/Input";
 import CredientialButton from "../../components/ui/CredientialButton";
 import userStore from "../../store/userStore";
 import { toast } from "react-toastify";
+import { showGlobalLoader, hideGlobalLoader } from "../../store/loadingStore";
 
 // Define types for errors
 interface FormErrors {
@@ -58,8 +58,10 @@ const Login: React.FC = () => {
     try {
       // validate
       await signupSchema.validate({ email, password }, { abortEarly: false });
+      showGlobalLoader("Signing in...");
       const data: UserData = { email, password };
       const result = await loginUser(data);
+      hideGlobalLoader();
 
       if (result.success) {
         setEmail("");
@@ -70,6 +72,7 @@ const Login: React.FC = () => {
         toast.error(result.message || "Login failed");
       }
     } catch (err: any) {
+      hideGlobalLoader();
       const valErrors: FormErrors = {};
       if (err?.inner && Array.isArray(err.inner)) {
         err.inner.forEach((vi: any) => {
@@ -133,56 +136,42 @@ const Login: React.FC = () => {
 
           {/* Form Section */}
           <form onSubmit={signupHandler} className="w-full mt-4 space-y-3">
-            {loading ? (
-              <div className="flex justify-center my-5">
-                <Loader
-                  type="spinner-cub"
-                  bgColor="#ffffff"
-                  color="#ffffff"
-                  size={80}
+            {/* Email Input */}
+            <Input
+              type="email"
+              value={email}
+              placeholder="Enter your email"
+              className="placeholder-gray-300"
+              onchange={handleChange(setEmail)}
+            />
+            {errors.email && (
+              <p className="text-sm text-red-600">{errors.email}</p>
+            )}
+
+            {/* Password Input */}
+            <div className="w-full h-auto relative">
+              {showPassword ? (
+                <Eye
+                  className="text-md absolute top-4 right-4 cursor-pointer"
+                  onClick={viewHandler}
                 />
-              </div>
-            ) : (
-              <>
-                {/* Email Input */}
-                <Input
-                  type="email"
-                  value={email}
-                  placeholder="Enter your email"
-                  className="placeholder-gray-300"
-                  onchange={handleChange(setEmail)}
+              ) : (
+                <EyeOff
+                  className="text-md absolute top-4 right-4 cursor-pointer"
+                  onClick={viewHandler}
                 />
-                {errors.email && (
-                  <p className="text-sm text-red-600">{errors.email}</p>
-                )}
+              )}
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                placeholder="Enter your password"
+                className="placeholder-gray-300"
+                onchange={handleChange(setPassword)}
+              />
+            </div>
 
-                {/* Password Input */}
-                <div className="w-full h-auto relative">
-                  {showPassword ? (
-                    <Eye
-                      className="text-md absolute top-4 right-4 cursor-pointer"
-                      onClick={viewHandler}
-                    />
-                  ) : (
-                    <EyeOff
-                      className="text-md absolute top-4 right-4 cursor-pointer"
-                      onClick={viewHandler}
-                    />
-                  )}
-                  <Input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    placeholder="Enter your password"
-                    className="placeholder-gray-300"
-                    onchange={handleChange(setPassword)}
-                  />
-                </div>
-
-                {errors.password && (
-                  <p className="text-sm text-red-600">{errors.password}</p>
-                )}
-
-              </>
+            {errors.password && (
+              <p className="text-sm text-red-600">{errors.password}</p>
             )}
           </form>
 
@@ -190,7 +179,8 @@ const Login: React.FC = () => {
           <div className="w-full flex flex-col items-center mt-5">
             <CredientialButton
               className="w-[80%] font-semibold py-2 rounded-lg shadow-md transition-all duration-300"
-              text={loading ? "Please wait..." : "Login"}
+              text={loading ? "Signing in..." : "Login"}
+              loading={loading}
               onclick={signupHandler as unknown as () => void}
             />
             <p className="text-xs sm:text-sm mt-2">

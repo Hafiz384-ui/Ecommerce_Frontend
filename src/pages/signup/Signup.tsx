@@ -7,11 +7,11 @@ import type {
 import { Eye, EyeOff, ShoppingCart } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import * as Yup from "yup";
-import Loader from "react-js-loader";
 import Input from "../../components/ui/Input";
 import CredientialButton from "../../components/ui/CredientialButton";
 import userStore from "../../store/userStore";
 import { toast } from "react-toastify";
+import { showGlobalLoader, hideGlobalLoader } from "../../store/loadingStore";
 
 // Define types for errors
 interface FormErrors {
@@ -64,8 +64,10 @@ const Signup: React.FC = () => {
         { abortEarly: false }
       );
 
+      showGlobalLoader("Creating your account...");
       const data: UserData = { username, email, password };
       const result = await registerUser(data);
+      hideGlobalLoader();
 
       if (result.success) {
         setUsername("");
@@ -79,6 +81,7 @@ const Signup: React.FC = () => {
         toast.error(result.message || "Registration failed");
       }
     } catch (err: any) {
+      hideGlobalLoader();
       // Yup validation errors
       if (err?.inner && Array.isArray(err.inner)) {
         const valErrors: FormErrors = {};
@@ -130,70 +133,58 @@ const Signup: React.FC = () => {
         </div>
 
         <form onSubmit={signupHandler} className="w-full mt-4 space-y-3">
-          {loading ? (
-            <div className="flex justify-center my-5">
-              <Loader
-                type="spinner-cub"
-                bgColor="#ffffff"
-                color="#ffffff"
-                size={80}
-              />
-            </div>
-          ) : (
-            <>
-              <Input
-                type="text"
-                value={username}
-                placeholder="Enter your username"
-                className=" placeholder-gray-300"
-                onchange={handleChange(setUsername)}
-              />
-              {errors.username && (
-                <p className="text-sm text-red-400">{errors.username}</p>
-              )}
+          <Input
+            type="text"
+            value={username}
+            placeholder="Enter your username"
+            className=" placeholder-gray-300"
+            onchange={handleChange(setUsername)}
+          />
+          {errors.username && (
+            <p className="text-sm text-red-400">{errors.username}</p>
+          )}
 
-              <Input
-                type="email"
-                value={email}
-                placeholder="Enter your email"
-                className=" placeholder-gray-300"
-                onchange={handleChange(setEmail)}
-              />
-              {errors.email && (
-                <p className="text-sm text-red-400">{errors.email}</p>
-              )}
+          <Input
+            type="email"
+            value={email}
+            placeholder="Enter your email"
+            className=" placeholder-gray-300"
+            onchange={handleChange(setEmail)}
+          />
+          {errors.email && (
+            <p className="text-sm text-red-400">{errors.email}</p>
+          )}
 
-              <div className="w-full h-auto relative">
-                {showPassword ? (
-                  <Eye
-                    className="text-md absolute top-4 right-4 cursor-pointer"
-                    onClick={viewHandler}
-                  />
-                ) : (
-                  <EyeOff
-                    className="text-md absolute top-4 right-4 cursor-pointer"
-                    onClick={viewHandler}
-                  />
-                )}
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  placeholder="Enter your password"
-                  className=" placeholder-gray-300"
-                  onchange={handleChange(setPassword)}
-                />
-              </div>
-              {errors.password && (
-                <p className="text-sm text-red-400">{errors.password}</p>
-              )}
-            </>
+          <div className="w-full h-auto relative">
+            {showPassword ? (
+              <Eye
+                className="text-md absolute top-4 right-4 cursor-pointer"
+                onClick={viewHandler}
+              />
+            ) : (
+              <EyeOff
+                className="text-md absolute top-4 right-4 cursor-pointer"
+                onClick={viewHandler}
+              />
+            )}
+            <Input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              placeholder="Enter your password"
+              className=" placeholder-gray-300"
+              onchange={handleChange(setPassword)}
+            />
+          </div>
+          {errors.password && (
+            <p className="text-sm text-red-400">{errors.password}</p>
           )}
         </form>
 
         <div className="w-full flex flex-col items-center mt-5">
           <CredientialButton
             className="w-[80%] font-semibold py-2 rounded-lg shadow-md transition-all duration-300"
-            text={loading ? "Please wait..." : "Sign Up"}
+            text={loading ? "Creating account..." : "Sign Up"}
+            loading={loading}
             onclick={signupHandler as unknown as () => void} // cast if CredientialButton expects no event arg
           />
           <p className=" text-xs sm:text-sm mt-2">
