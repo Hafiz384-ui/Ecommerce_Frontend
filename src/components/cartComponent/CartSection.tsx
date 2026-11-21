@@ -80,7 +80,7 @@ const CartSection: React.FC = () => {
     });
 
     try {
-      const res = await addToCart({
+      await addToCart({
         productId,
         variantId,
         quantity: 1,
@@ -114,7 +114,7 @@ const CartSection: React.FC = () => {
     });
 
     try {
-      const res = await addToCart({
+      await addToCart({
         productId,
         variantId,
         quantity: -1,
