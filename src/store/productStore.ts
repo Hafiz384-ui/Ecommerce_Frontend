@@ -135,8 +135,6 @@ const productStore = create<ProductStore>((set) => ({
   addItemsToSummary: (data: any[]) => {
     set(() => {
       const summary = data;
-      console.log("summary data in store", summary);
-
       return { summaryItems: summary };
     });
   },
@@ -189,7 +187,6 @@ const productStore = create<ProductStore>((set) => ({
       // await new Promise((resolve) => setTimeout(resolve, 800));
 
       const responseData = await addToCartApi(data);
-      console.log("add to cart response in store", responseData);
       const newCartItems = responseData.cart?.items || [];
       set({
         cartActionLoading: false,
@@ -226,7 +223,6 @@ const productStore = create<ProductStore>((set) => ({
     try {
       set({ productLoading: true, error: null });
       const responseData = await fetchCartItemsApi();
-      console.log("items in store", responseData.items);
       const items = responseData.items || [];
 
       set({

@@ -29,7 +29,6 @@ const CartSection: React.FC = () => {
     const getItems = async () => {
       window.scrollTo(0, 0);
       const res = (await fetchCartItems()) as any;
-      console.log("data fetch from backend..", res.data?.items);
 
       if (res.success && res.data?.items) {
         const formattedItems = res.data.items.map((item: any) => ({
@@ -87,9 +86,7 @@ const CartSection: React.FC = () => {
         quantity: 1,
         variantMaxQuantity: variantQuantity,
       } as any);
-      console.log("Cart updated:", res.message);
     } catch (err) {
-      console.error("Error updating cart:", err);
       toast.error("Failed to update item quantity");
     } finally {
       setUpdatingId(null);
@@ -123,9 +120,7 @@ const CartSection: React.FC = () => {
         quantity: -1,
         variantMaxQuantity: variantQuantity,
       } as any);
-      console.log("Quantity decreased:", res.message);
     } catch (err) {
-      console.error("Error decreasing cart quantity:", err);
       toast.error("Failed to update item quantity");
     } finally {
       setUpdatingId(null);

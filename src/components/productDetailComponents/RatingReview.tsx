@@ -6,9 +6,7 @@ function RatingReview() {
   const { currentProduct } = productStore();
   useEffect(() => {
     const fetchProduct = async () => {
-      await currentProduct;
-      console.log(currentProduct);
-      
+      await currentProduct;      
     };
     fetchProduct();
   }, []);

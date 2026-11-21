@@ -49,7 +49,6 @@ const addressStore = create<AddressStore>((set) => ({
     try {
       set({ loading: true, error: null });
       const responseData = await fetchAddressesApi();
-      console.log("address in store ...", responseData.addresses);
       set({
         addresses: responseData.addresses || [],
         loading: false,

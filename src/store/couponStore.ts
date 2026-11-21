@@ -21,7 +21,6 @@ const couponStore = create<CouponStore>((set) => ({
     try {
       set({ loading: true, error: null });
       const responseData = await fetchCouponsApi();
-      console.log("Coupon response:", responseData);
 
       // Support both new enhanced objects or fallback legacy array
       const rawCoupons = Array.isArray(responseData?.coupon) ? responseData.coupon : [];
